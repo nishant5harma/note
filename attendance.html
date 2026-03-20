@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CRM Backend — Attendance Module</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-950 text-gray-200">
+    <div class="max-w-6xl mx-auto px-6 py-10">
+      <header class="mb-10">
+        <h1 class="text-3xl font-extrabold text-white">Attendance Module</h1>
+        <p class="text-gray-400 mt-2">
+          Complete deep-dive: how attendance works, what happens on checkin/checkout, DB schema, GPS location logging, audit trails, and full frontend integration guide.
+        </p>
+        <div class="mt-4 bg-gray-900 border border-gray-800 rounded-xl p-4 text-sm text-gray-300">
+          <p><strong class="text-white">Base path:</strong> <code class="text-indigo-200">/api/hr/attendance</code></p>
+          <p class="mt-1"><strong class="text-white">Auth required:</strong> JWT (<code>Authorization: Bearer &lt;token&gt;</code>) on every request.</p>
+        </div>
+      </header>
+
+      <!-- Flow Overview -->
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-4">Full Flow: How Attendance Works</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-4">
+          <div class="flex gap-4">
+            <div class="flex flex-col items-center">
+              <div class="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-sm">1</div>
+              <div class="flex-1 w-px bg-gray-700 mt-2"></div>
+            </div>
+            <div class="pb-6">
+              <p class="font-semibold text-white">App Launch / Morning</p>
+              <p class="text-sm text-gray-400 mt-1">Employee opens the app. Frontend shows "Checkin" button if not yet checked in today. App may ask for consent permission for location/photo before first checkin.</p>
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <div class="flex flex-col items-center">
+              <div class="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-sm">2</div>
+              <div class="flex-1 w-px bg-gray-700 mt-2"></div>
+            </div>
+            <div class="pb-6">
+              <p class="font-semibold text-white">Checkin Request</p>
+              <p class="text-sm text-gray-400 mt-1">Employee taps "Checkin". App captures current GPS location + optionally takes a selfie. Sends <code class="text-indigo-200">POST /api/hr/attendance/checkin</code> with location + photoRef.</p>
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <div class="flex flex-col items-center">
+              <div class="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-sm">3</div>
+              <div class="flex-1 w-px bg-gray-700 mt-2"></div>
+            </div>
+            <div class="pb-6">
+              <p class="font-semibold text-white">Backend Processing (Atomic Transaction)</p>
+              <ul class="text-sm text-gray-400 mt-1 list-disc list-inside space-y-1">
+                <li>Checks: user must not have checked in today already.</li>
+                <li>Creates <code class="text-indigo-200">Attendance</code> row (<code>status: ACCEPTED</code>, <code>checkinAt</code> = now).</li>
+                <li>If lat/lng provided → creates <code class="text-indigo-200">LocationLog</code> row (<code>source: "attendance"</code>).</li>
+                <li>Creates <code class="text-indigo-200">LocationAccessAudit</code> (<code>action: "checkin_created"</code>).</li>
+                <li>After transaction → calls <code class="text-indigo-200">logAudit</code> (action: <code>"checkin"</code>).</li>
+              </ul>
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <div class="flex flex-col items-center">
+              <div class="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-sm">4</div>
+              <div class="flex-1 w-px bg-gray-700 mt-2"></div>
+            </div>
+            <div class="pb-6">
+              <p class="font-semibold text-white">Working Day</p>
+              <p class="text-sm text-gray-400 mt-1">Employee is marked as "present" for the day. Managers can see this via <code class="text-indigo-200">GET /api/hr/attendance</code>. Status is <code>ACCEPTED</code>.</p>
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <div class="flex flex-col items-center">
+              <div class="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-white font-bold text-sm">5</div>
+            </div>
+            <div>
+              <p class="font-semibold text-white">Checkout (End of Day)</p>
+              <p class="text-sm text-gray-400 mt-1">Employee taps "Checkout". Sends <code class="text-indigo-200">POST /api/hr/attendance/checkout</code>. Backend sets <code>checkoutAt</code> on today's attendance row. Logs audit (<code>"checkout"</code> action). Fails if not checked in or already checked out.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Attendance Status Values -->
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-4">Attendance Status Values</h2>
+        <div class="overflow-x-auto bg-gray-900 border border-gray-800 rounded-xl">
+          <table class="text-sm w-full">
+            <thead>
+              <tr class="text-gray-500 border-b border-gray-700 text-left bg-gray-950">
+                <th class="py-3 px-4">Status</th>
+                <th class="py-3 px-4">Meaning</th>
+                <th class="py-3 px-4">When set</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800 text-xs">
+              <tr>
+                <td class="py-2 px-4 font-mono text-yellow-300">PENDING</td>
+                <td class="py-2 px-4">Created but awaiting confirmation</td>
+                <td class="py-2 px-4">Not currently set by checkin (checkin sets ACCEPTED directly)</td>
+              </tr>
+              <tr>
+                <td class="py-2 px-4 font-mono text-green-300">ACCEPTED</td>
+                <td class="py-2 px-4">Attendance recorded successfully</td>
+                <td class="py-2 px-4">Set on <code>POST /checkin</code> (default)</td>
+              </tr>
+              <tr>
+                <td class="py-2 px-4 font-mono text-blue-300">CONFIRMED</td>
+                <td class="py-2 px-4">Manager/admin has confirmed the attendance</td>
+                <td class="py-2 px-4">Reserved for future admin confirmation flow</td>
+              </tr>
+              <tr>
+                <td class="py-2 px-4 font-mono text-purple-300">FINALIZED</td>
+                <td class="py-2 px-4">Attendance locked/finalized for payroll</td>
+                <td class="py-2 px-4">Reserved for payroll finalization flow</td>
+              </tr>
+              <tr>
+                <td class="py-2 px-4 font-mono text-red-300">REJECTED</td>
+                <td class="py-2 px-4">Attendance was rejected (fraud/invalid)</td>
+                <td class="py-2 px-4">Reserved for admin rejection flow</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">Current checkin always sets <code>ACCEPTED</code>. CONFIRMED/FINALIZED/REJECTED are for future flows.</p>
+      </section>
+
+      <!-- API Endpoints Full Detail -->
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-4">Endpoints — Full Detail</h2>
+
+        <!-- Checkin -->
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-indigo-600 text-white">POST</span>
+            <code class="text-white font-mono text-base">/api/hr/attendance/checkin</code>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <p class="text-xs font-semibold text-gray-400 mb-2">Request Body (all optional except none required — bare POST works)</p>
+              <pre class="text-xs text-yellow-200 bg-gray-950 rounded p-3">{
+  "photoRef": "https://cdn.example.com/selfie.jpg",
+  "latitude": 19.076090,
+  "longitude": 72.877426,
+  "accuracy": 12.5,
+  "locationTs": "2026-03-18T09:00:00.000Z",
+  "note": "Reached office on time"
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-400 mb-2">Response 201 Created</p>
+              <pre class="text-xs text-green-200 bg-gray-950 rounded p-3">{
+  "attendance": {
+    "id": "att_abc123",
+    "userId": "user_xyz",
+    "status": "ACCEPTED",
+    "checkinAt": "2026-03-18T09:00:00.000Z",
+    "checkoutAt": null,
+    "photoRef": "...",
+    "latitude": 19.076,
+    "longitude": 72.877,
+    "accuracy": 12.5,
+    "locationTs": "...",
+    "note": "Reached office on time"
+  }
+}</pre>
+            </div>
+          </div>
+          <div class="mt-4 text-xs text-gray-400 space-y-1">
+            <p><strong class="text-gray-200">Validation:</strong> Only 1 checkin per day per user. Duplicate returns <code>400 You've already checked in today.</code></p>
+            <p><strong class="text-gray-200">Permission:</strong> <code>attendance.self</code></p>
+            <p><strong class="text-gray-200">DB writes:</strong> <code>Attendance</code> + <code>LocationLog</code> (if lat/lng) + <code>LocationAccessAudit</code> + <code>AuditLog</code> — all atomic.</p>
+          </div>
+        </div>
+
+        <!-- Checkout -->
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-indigo-600 text-white">POST</span>
+            <code class="text-white font-mono text-base">/api/hr/attendance/checkout</code>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <p class="text-xs font-semibold text-gray-400 mb-2">Request Body</p>
+              <pre class="text-xs text-yellow-200 bg-gray-950 rounded p-3">{}  // Empty body — no body needed</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-400 mb-2">Response 200 OK</p>
+              <pre class="text-xs text-green-200 bg-gray-950 rounded p-3">{
+  "id": "att_abc123",
+  "userId": "user_xyz",
+  "status": "ACCEPTED",
+  "checkinAt": "2026-03-18T09:00:00.000Z",
+  "checkoutAt": "2026-03-18T18:30:00.000Z",
+  ...
+}</pre>
+            </div>
+          </div>
+          <div class="mt-4 text-xs text-gray-400 space-y-1">
+            <p><strong class="text-gray-200">Errors:</strong> <code>400 You haven't checked in today.</code> | <code>400 You've already checked out today.</code></p>
+            <p><strong class="text-gray-200">Permission:</strong> <code>attendance.self</code></p>
+            <p><strong class="text-gray-200">DB writes:</strong> Updates <code>attendance.checkoutAt</code> + writes <code>AuditLog</code> (action: <code>checkout</code>).</p>
+          </div>
+        </div>
+
+        <!-- List -->
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-emerald-600 text-white">GET</span>
+            <code class="text-white font-mono text-base">/api/hr/attendance</code>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <p class="text-xs font-semibold text-gray-400 mb-2">Query Parameters</p>
+              <pre class="text-xs text-yellow-200 bg-gray-950 rounded p-3">GET /api/hr/attendance
+  ?userId=user_abc      // filter by user
+  &teamId=team_xyz      // filter by team (all team members)
+  &from=2026-03-01      // date range start (ISO)
+  &to=2026-03-31        // date range end (ISO)
+  &page=1               // pagination
+  &limit=50             // default 100</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-400 mb-2">Response</p>
+              <pre class="text-xs text-green-200 bg-gray-950 rounded p-3">{
+  "count": 42,
+  "rows": [
+    {
+      "id": "att_abc123",
+      "userId": "user_xyz",
+      "status": "ACCEPTED",
+      "checkinAt": "2026-03-18T09:00:00.000Z",
+      "checkoutAt": "2026-03-18T18:30:00.000Z",
+      "latitude": 19.076,
+      "longitude": 72.877,
+      "photoRef": null,
+      "note": null,
+      "user": {
+        "id": "user_xyz",
+        "name": "Ravi Kumar",
+        "email": "ravi@company.com",
+        "teamMembers": [
+          { "team": { "id": "team_abc", "name": "Sales" } }
+        ]
+      }
+    }
+  ]
+}</pre>
+            </div>
+          </div>
+          <div class="mt-4 text-xs text-gray-400 space-y-1">
+            <p><strong class="text-gray-200">Permission:</strong> <code>attendance.read</code> — only managers/HR/admins should have this.</p>
+            <p><strong class="text-gray-200">Includes:</strong> User info with their team memberships. Sorted by <code>checkinAt DESC</code>.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Database Schema -->
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-4">Database Schema</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <p class="font-bold text-white mb-3">Attendance Table</p>
+            <pre class="text-xs text-indigo-200">model Attendance {
+  id          String           @id @default(cuid())
+  userId      String
+  status      AttendanceStatus @default(ACCEPTED)
+  checkinAt   DateTime
+  checkoutAt  DateTime?
+  photoRef    String?          // photo URL
+  latitude    Float?
+  longitude   Float?
+  accuracy    Float?
+  locationTs  DateTime?        // GPS timestamp
+  note        String?
+  user        User             @relation(...)
+}</pre>
+          </div>
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <p class="font-bold text-white mb-3">LocationLog Table</p>
+            <pre class="text-xs text-indigo-200">model LocationLog {
+  id          String   @id @default(cuid())
+  userId      String
+  latitude    Float
+  longitude   Float
+  accuracy    Float?
+  recordedAt  DateTime
+  source      String   // "attendance" | "location_request"
+}</pre>
+            <p class="font-bold text-white mt-4 mb-3">LocationAccessAudit Table</p>
+            <pre class="text-xs text-indigo-200">model LocationAccessAudit {
+  id        String   @id @default(cuid())
+  actorId   String
+  targetId  String
+  action    String   // "checkin_created" | "request_created"
+              //    | "request_responded" | "result_read"
+  meta      Json?
+  createdAt DateTime @default(now())
+}</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- What gets logged -->
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-4">Audit Logs Generated</h2>
+        <div class="overflow-x-auto bg-gray-900 border border-gray-800 rounded-xl">
+          <table class="text-sm w-full">
+            <thead>
+              <tr class="text-gray-500 border-b border-gray-700 text-left bg-gray-950">
+                <th class="py-3 px-4">Action</th>
+                <th class="py-3 px-4">Resource</th>
+                <th class="py-3 px-4">When</th>
+                <th class="py-3 px-4">Payload</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800 text-xs">
+              <tr>
+                <td class="py-2 px-4 font-mono text-indigo-300">checkin</td>
+                <td class="py-2 px-4 font-mono">attendance</td>
+                <td class="py-2 px-4">On checkin</td>
+                <td class="py-2 px-4"><code>{ latitude, longitude }</code></td>
+              </tr>
+              <tr>
+                <td class="py-2 px-4 font-mono text-indigo-300">checkout</td>
+                <td class="py-2 px-4 font-mono">attendance</td>
+                <td class="py-2 px-4">On checkout</td>
+                <td class="py-2 px-4">No extra payload</td>
+              </tr>
+              <tr>
+                <td class="py-2 px-4 font-mono text-indigo-300">location.request.create</td>
+                <td class="py-2 px-4 font-mono">locationRequest</td>
+                <td class="py-2 px-4">Supervisor creates location request</td>
+                <td class="py-2 px-4"><code>{ targetUserId, expiresAt, note }</code></td>
+              </tr>
+              <tr>
+                <td class="py-2 px-4 font-mono text-indigo-300">location.request.respond</td>
+                <td class="py-2 px-4 font-mono">locationRequest</td>
+                <td class="py-2 px-4">Employee responds with coords</td>
+                <td class="py-2 px-4"><code>{ latitude, longitude, accuracy, recordedAt }</code></td>
+              </tr>
+              <tr>
+                <td class="py-2 px-4 font-mono text-indigo-300">location.request.read</td>
+                <td class="py-2 px-4 font-mono">locationRequest</td>
+                <td class="py-2 px-4">Supervisor reads result from Redis</td>
+                <td class="py-2 px-4"><code>{ ephemeral: true }</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">View all attendance audit logs via <code>GET /api/audit-logs?resource=attendance</code></p>
+      </section>
+
+      <!-- Frontend Guide -->
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-4">Frontend Integration Guide</h2>
+        <div class="space-y-4 text-sm">
+
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <p class="font-bold text-white mb-3">Step 1 — Consent (First Launch)</p>
+            <p class="text-gray-400">Before checkin with GPS, check if user has given <code>LOCATION</code> consent. If not, show a consent dialog and call:</p>
+            <pre class="text-xs text-yellow-200 bg-gray-950 rounded p-3 mt-2">POST /api/hr/consent
+{ "type": "LOCATION", "version": "1.0" }</pre>
+          </div>
+
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <p class="font-bold text-white mb-3">Step 2 — Device Registration (Login)</p>
+            <p class="text-gray-400">On every login, register the device to enable location push notifications:</p>
+            <pre class="text-xs text-yellow-200 bg-gray-950 rounded p-3 mt-2">POST /api/hr/devices/register
+{
+  "deviceId": "expo-device-id",
+  "platform": "android",
+  "pushToken": "ExponentPushToken[xxx]"
+}</pre>
+          </div>
+
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <p class="font-bold text-white mb-3">Step 3 — Check Today's Attendance Status</p>
+            <p class="text-gray-400">Query to know if employee already checked in/out today:</p>
+            <pre class="text-xs text-yellow-200 bg-gray-950 rounded p-3 mt-2">GET /api/hr/attendance?userId=&lt;myUserId&gt;&from=&lt;todayISO&gt;&to=&lt;todayISO&gt;
+
+// if rows[0] && rows[0].checkoutAt → show "Checked out at HH:MM"
+// if rows[0] && !rows[0].checkoutAt → show "Checked in at HH:MM, Checkout now"
+// if rows.length === 0 → show "Checkin" button</pre>
+          </div>
+
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <p class="font-bold text-white mb-3">Step 4 — Checkin Button</p>
+            <pre class="text-xs text-yellow-200 bg-gray-950 rounded p-3">// Get GPS location first
+const location = await Location.getCurrentPositionAsync({});
+
+// Take selfie (optional)
+const photo = await ImagePicker.launchCameraAsync({});
+// Upload to storage, get photoRef URL
+
+// Call checkin
+const res = await fetch('/api/hr/attendance/checkin', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  },
+  body: JSON.stringify({
+    latitude: location.coords.latitude,
+    longitude: location.coords.longitude,
+    accuracy: location.coords.accuracy,
+    locationTs: new Date().toISOString(),
+    photoRef: photo?.uri ?? undefined,
+    note: "On time"
+  })
+});</pre>
+          </div>
+
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <p class="font-bold text-white mb-3">Step 5 — Checkout Button</p>
+            <pre class="text-xs text-yellow-200 bg-gray-950 rounded p-3">const res = await fetch('/api/hr/attendance/checkout', {
+  method: 'POST',
+  headers: { 'Authorization': `Bearer ${token}` }
+});</pre>
+          </div>
+
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <p class="font-bold text-white mb-3">Manager Dashboard — View Team Attendance</p>
+            <pre class="text-xs text-yellow-200 bg-gray-950 rounded p-3">// Show attendance for "Sales" team for today
+GET /api/hr/attendance
+  ?teamId=team_sales_id
+  &from=2026-03-18T00:00:00.000Z
+  &to=2026-03-18T23:59:59.000Z
+
+// Show all team attendance for this month
+GET /api/hr/attendance
+  ?teamId=team_sales_id
+  &from=2026-03-01
+  &to=2026-03-31
+  &page=1
+  &limit=200</pre>
+          </div>
+
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <p class="font-bold text-white mb-3">Location Request Flow (Manager Checking Employee Location)</p>
+            <pre class="text-xs text-yellow-200 bg-gray-950 rounded p-3">// STEP 1: Manager creates request
+const { requestId } = await fetch('/api/hr/location-requests', {
+  method: 'POST',
+  body: JSON.stringify({ targetUserId: "emp_id", expiresInSeconds: 60 })
+}).then(r => r.json());
+
+// STEP 2: Employee device receives:
+// Socket event: "location.fetch_request" { requestId, requesterId }
+// Push notification: silent push to wake device
+
+// STEP 3: Employee app auto-responds
+await fetch(`/api/hr/location-requests/${requestId}/respond`, {
+  method: 'POST',
+  body: JSON.stringify({ latitude: 19.076, longitude: 72.877, accuracy: 8 })
+});
+
+// STEP 4: Manager polls for result
+const { coords } = await fetch(`/api/hr/location-requests/${requestId}/result`).then(r => r.json());
+// coords: { latitude, longitude, accuracy, recordedAt }
+
+// NOTE: result is one-time read (deleted from Redis after)</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Common Errors -->
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-4">Common Errors</h2>
+        <div class="overflow-x-auto bg-gray-900 border border-gray-800 rounded-xl">
+          <table class="text-sm w-full">
+            <thead>
+              <tr class="text-gray-500 border-b border-gray-700 text-left bg-gray-950">
+                <th class="py-3 px-4">Error</th>
+                <th class="py-3 px-4">Status</th>
+                <th class="py-3 px-4">Cause</th>
+                <th class="py-3 px-4">Fix</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800 text-xs">
+              <tr>
+                <td class="py-2 px-4 font-mono text-red-300">You've already checked in today.</td>
+                <td class="py-2 px-4">400</td>
+                <td class="py-2 px-4">Duplicate checkin for same day</td>
+                <td class="py-2 px-4">Check today's attendance first; show checkout instead</td>
+              </tr>
+              <tr>
+                <td class="py-2 px-4 font-mono text-red-300">You haven't checked in today.</td>
+                <td class="py-2 px-4">400</td>
+                <td class="py-2 px-4">Checkout called without checkin</td>
+                <td class="py-2 px-4">Show checkin button, not checkout</td>
+              </tr>
+              <tr>
+                <td class="py-2 px-4 font-mono text-red-300">You've already checked out today.</td>
+                <td class="py-2 px-4">400</td>
+                <td class="py-2 px-4">Double checkout</td>
+                <td class="py-2 px-4">Hide checkout button after successful checkout</td>
+              </tr>
+              <tr>
+                <td class="py-2 px-4 font-mono text-red-300">Missing permission: attendance.self</td>
+                <td class="py-2 px-4">403</td>
+                <td class="py-2 px-4">User role doesn't have attendance.self</td>
+                <td class="py-2 px-4">Assign <code>attendance.self</code> permission to employee role via RBAC</td>
+              </tr>
+              <tr>
+                <td class="py-2 px-4 font-mono text-red-300">Missing permission: attendance.read</td>
+                <td class="py-2 px-4">403</td>
+                <td class="py-2 px-4">Non-manager trying to list all attendance</td>
+                <td class="py-2 px-4">Only give <code>attendance.read</code> to Manager/HR/Admin roles</td>
+              </tr>
+              <tr>
+                <td class="py-2 px-4 font-mono text-red-300">Request is expired</td>
+                <td class="py-2 px-4">400</td>
+                <td class="py-2 px-4">Location request TTL exceeded</td>
+                <td class="py-2 px-4">Create a new location request</td>
+              </tr>
+              <tr>
+                <td class="py-2 px-4 font-mono text-red-300">Only target user can respond</td>
+                <td class="py-2 px-4">403</td>
+                <td class="py-2 px-4">Wrong user trying to respond</td>
+                <td class="py-2 px-4">Ensure the employee whose requestId it is responds</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Permissions Guide -->
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-4">Which Permissions to Assign to Which Role</h2>
+        <div class="overflow-x-auto bg-gray-900 border border-gray-800 rounded-xl">
+          <table class="text-sm w-full">
+            <thead>
+              <tr class="text-gray-500 border-b border-gray-700 text-left bg-gray-950">
+                <th class="py-3 px-4">Role</th>
+                <th class="py-3 px-4">Permissions to assign</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800 text-xs">
+              <tr>
+                <td class="py-2 px-4 font-bold text-white">Super Admin</td>
+                <td class="py-2 px-4">All — already seeded</td>
+              </tr>
+              <tr>
+                <td class="py-2 px-4 font-bold text-yellow-200">HR Manager</td>
+                <td class="py-2 px-4"><code>attendance.read</code>, <code>attendance.self</code>, <code>location.request</code>, <code>location.read</code>, <code>location.audit</code>, <code>consent.read</code></td>
+              </tr>
+              <tr>
+                <td class="py-2 px-4 font-bold text-blue-200">Team Manager</td>
+                <td class="py-2 px-4"><code>attendance.self</code>, <code>attendance.read</code>, <code>location.request</code>, <code>location.read</code></td>
+              </tr>
+              <tr>
+                <td class="py-2 px-4 font-bold text-green-200">Employee / Sales Agent</td>
+                <td class="py-2 px-4"><code>attendance.self</code>, <code>device.register</code>, <code>device.unregister</code>, <code>device.read</code>, <code>consent.write</code>, <code>consent.read</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">Manage permissions via: <code>POST /api/rbac/roles/:roleId/permissions</code> or <code>PATCH /api/rbac/users/:userId/roles</code></p>
+      </section>
+
+      <footer class="text-xs text-gray-500 mt-10">
+        <p>File: <code class="text-indigo-200">apps/backend/attendance.html</code></p>
+      </footer>
+    </div>
+  </body>
+</html>

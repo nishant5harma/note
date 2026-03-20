@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRM API — Inventory Management Reference</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { DEFAULT: '#6366f1', dark: '#4f46e5', light: '#a5b4fc' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    html { scroll-behavior: smooth; }
+    pre { white-space: pre-wrap; word-break: break-all; }
+    .badge-get    { background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; }
+    .badge-post   { background:#dbeafe; color:#1e40af; border:1px solid #93c5fd; }
+    .badge-put    { background:#fef3c7; color:#92400e; border:1px solid #fcd34d; }
+    .badge-patch  { background:#ede9fe; color:#5b21b6; border:1px solid #c4b5fd; }
+    .badge-delete { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
+  </style>
+</head>
+<body class="bg-gray-950 text-gray-200 font-sans antialiased">
+
+  <!-- ─── Sidebar ─────────────────────────────────────────────────── -->
+  <aside class="fixed top-0 left-0 h-full w-64 bg-gray-900 border-r border-gray-800 overflow-y-auto z-30 hidden lg:flex flex-col">
+    <div class="px-6 py-5 border-b border-gray-800">
+      <span class="text-xs font-semibold tracking-widest text-indigo-400 uppercase">CRM Backend</span>
+      <h1 class="text-lg font-bold text-white mt-1">Inventory API</h1>
+    </div>
+    <nav class="flex-1 px-4 py-4 space-y-1 text-sm">
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-2 pb-1">Projects</p>
+      <a href="#proj-list"   class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">List Projects</a>
+      <a href="#proj-create" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Create Project</a>
+      <a href="#proj-update" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Update Project</a>
+      <a href="#proj-delete" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Delete Project</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Towers</p>
+      <a href="#tower-list"   class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">List Towers</a>
+      <a href="#tower-create" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Create Tower</a>
+      <a href="#tower-get"    class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Get Tower</a>
+      <a href="#tower-update" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Update Tower</a>
+      <a href="#tower-delete" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Delete Tower</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Units</p>
+      <a href="#unit-list"          class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">List Units</a>
+      <a href="#unit-create"        class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Create Unit</a>
+      <a href="#unit-get"           class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Get Unit</a>
+      <a href="#unit-update"        class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Update Unit</a>
+      <a href="#unit-delete"        class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Delete Unit</a>
+      <a href="#unit-sell"          class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Sell Unit</a>
+      <a href="#unit-img-upload"    class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Upload Images</a>
+      <a href="#unit-img-list"      class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">List Images</a>
+      <a href="#unit-img-delete"    class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Delete Image</a>
+      <a href="#unit-img-reorder"   class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Reorder Images</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Listings</p>
+      <a href="#listing-list"        class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">List Listings</a>
+      <a href="#listing-create"      class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Create Listing</a>
+      <a href="#listing-get"         class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Get Listing</a>
+      <a href="#listing-update"      class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Update Listing</a>
+      <a href="#listing-close"       class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Close Listing</a>
+      <a href="#listing-delete"      class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Delete Listing</a>
+      <a href="#listing-img-upload"  class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Upload Images</a>
+      <a href="#listing-img-list"    class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">List Images</a>
+      <a href="#listing-img-delete"  class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Delete Image</a>
+      <a href="#listing-img-reorder" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Reorder Images</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Reservations</p>
+      <a href="#res-list"   class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">List Reservations</a>
+      <a href="#res-create" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Create Reservation</a>
+      <a href="#res-get"    class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Get Reservation</a>
+      <a href="#res-update" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Update Reservation</a>
+      <a href="#res-cancel" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Cancel Reservation</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Reference</p>
+      <a href="#enums"   class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Enums &amp; Statuses</a>
+      <a href="#summary" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">All Endpoints Summary</a>
+    </nav>
+    <div class="px-6 py-4 border-t border-gray-800 text-xs text-gray-500">
+      Base URL: <span class="text-indigo-400 font-mono">/api/inventory</span>
+    </div>
+  </aside>
+
+  <!-- ─── Main ──────────────────────────────────────────────────────── -->
+  <main class="lg:ml-64 min-h-screen">
+
+    <!-- Hero -->
+    <div class="bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 border-b border-gray-800 px-6 md:px-12 py-12">
+      <div class="max-w-4xl">
+        <span class="inline-block text-xs font-semibold tracking-widest text-indigo-400 uppercase mb-3">CRM Backend · Super Admin</span>
+        <h1 class="text-3xl md:text-4xl font-extrabold text-white mb-4">Inventory Management API</h1>
+        <p class="text-gray-400 text-base md:text-lg leading-relaxed mb-6">
+          Complete reference for all Inventory endpoints — Projects, Towers, Units, Listings, and Reservations.
+          Every endpoint requires a valid JWT and the corresponding RBAC permission.
+        </p>
+        <div class="flex flex-wrap gap-3 text-sm">
+          <span class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-gray-300">
+            Base&nbsp;<span class="text-indigo-400 font-mono font-semibold">/api/inventory</span>
+          </span>
+          <span class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-gray-300">
+            Auth&nbsp;<span class="text-amber-400 font-mono">Bearer &lt;token&gt;</span>
+          </span>
+          <span class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-gray-300">
+            34 endpoints across 5 resources
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="px-6 md:px-12 py-10 max-w-5xl space-y-20">
+
+      <!-- ══════════════════════════════════════════
+           AUTH NOTE
+      ══════════════════════════════════════════ -->
+      <section>
+        <div class="bg-indigo-950 border border-indigo-800 rounded-xl p-6">
+          <h2 class="text-indigo-300 font-bold text-lg mb-2">Authentication &amp; Permissions</h2>
+          <p class="text-gray-300 text-sm leading-relaxed mb-4">
+            All inventory endpoints are protected by two middleware layers:
+          </p>
+          <ul class="list-disc list-inside text-sm text-gray-300 space-y-1 mb-4">
+            <li><strong class="text-white">requireAuth</strong> — validates the JWT in the <code class="text-amber-300">Authorization: Bearer &lt;token&gt;</code> header.</li>
+            <li><strong class="text-white">requirePermission("inventory", action)</strong> — checks the user's RBAC role for the specific action.</li>
+          </ul>
+          <div class="overflow-x-auto">
+            <table class="text-sm w-full">
+              <thead>
+                <tr class="text-gray-400 border-b border-gray-700">
+                  <th class="text-left py-2 pr-6">Action</th>
+                  <th class="text-left py-2">Description</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-800">
+                <tr><td class="py-2 pr-6 font-mono text-green-400">inventory:read</td><td class="py-2 text-gray-300">List or fetch resources</td></tr>
+                <tr><td class="py-2 pr-6 font-mono text-blue-400">inventory:write</td><td class="py-2 text-gray-300">Create or update resources</td></tr>
+                <tr><td class="py-2 pr-6 font-mono text-red-400">inventory:delete</td><td class="py-2 text-gray-300">Delete resources and images</td></tr>
+                <tr><td class="py-2 pr-6 font-mono text-purple-400">inventory:manage</td><td class="py-2 text-gray-300">High-impact actions (sell unit, close listing)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════
+           PROJECTS
+      ══════════════════════════════════════════ -->
+      <section>
+        <h2 class="text-2xl font-bold text-white mb-1">Projects</h2>
+        <p class="text-gray-400 text-sm mb-8">Base path: <code class="text-indigo-400 font-mono">/api/inventory/projects</code></p>
+
+        <!-- List Projects -->
+        <div id="proj-list" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/inventory/projects</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:read</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Returns a list of all projects.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "items": [
+    {
+      "id": "clxyz...",
+      "name": "Skyline Heights",
+      "developer": "ICB Developers",
+      "city": "Mumbai",
+      "locality": "Andheri West",
+      "address": "Plot 12, Versova Road",
+      "meta": {},
+      "active": true,
+      "createdAt": "2025-01-10T09:00:00.000Z",
+      "updatedAt": "2025-06-01T12:00:00.000Z"
+    }
+  ]
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Create Project -->
+        <div id="proj-create" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/inventory/projects</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:write</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Creates a new project.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body <span class="text-gray-600">(application/json)</span></p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "name": "Skyline Heights",          // required — string
+  "developer": "ICB Developers",      // optional
+  "city": "Mumbai",                   // optional
+  "locality": "Andheri West",         // optional
+  "address": "Plot 12, Versova Road", // optional
+  "meta": {}                          // optional — any JSON
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 201</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "project": {
+    "id": "clxyz...",
+    "name": "Skyline Heights",
+    "developer": "ICB Developers",
+    "city": "Mumbai",
+    "locality": "Andheri West",
+    "address": "Plot 12, Versova Road",
+    "meta": {},
+    "active": true,
+    "createdAt": "2025-01-10T09:00:00.000Z",
+    "updatedAt": "2025-01-10T09:00:00.000Z"
+  }
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Update Project -->
+        <div id="proj-update" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-put text-xs font-bold px-3 py-1 rounded-full font-mono">PUT</span>
+            <code class="text-white font-mono text-sm">/api/inventory/projects/:id</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:write</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Updates an existing project. All fields are optional (partial update).</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Path Parameters</p>
+              <table class="text-sm w-full">
+                <tbody>
+                  <tr><td class="pr-4 py-1 font-mono text-indigo-300">id</td><td class="text-gray-300">Project CUID</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "name": "Updated Name",   // optional
+  "city": "Pune",           // optional
+  "locality": "Koregaon",   // optional
+  "address": "...",         // optional
+  "developer": "...",       // optional
+  "meta": {}                // optional
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "project": { /* updated Project object */ }
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delete Project -->
+        <div id="proj-delete" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-delete text-xs font-bold px-3 py-1 rounded-full font-mono">DELETE</span>
+            <code class="text-white font-mono text-sm">/api/inventory/projects/:id</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:delete</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Deletes a project by ID.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "project": { /* deleted Project object */ }
+}</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════
+           TOWERS
+      ══════════════════════════════════════════ -->
+      <section>
+        <h2 class="text-2xl font-bold text-white mb-1">Towers</h2>
+        <p class="text-gray-400 text-sm mb-8">Base path: <code class="text-indigo-400 font-mono">/api/inventory/towers</code></p>
+
+        <!-- List Towers -->
+        <div id="tower-list" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/inventory/towers</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:read</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Returns all towers, optionally filtered by project.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Query Parameters</p>
+              <table class="text-sm w-full">
+                <thead><tr class="text-gray-500 border-b border-gray-700"><th class="text-left py-1 pr-4">Param</th><th class="text-left py-1 pr-4">Type</th><th class="text-left py-1">Description</th></tr></thead>
+                <tbody class="divide-y divide-gray-800">
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">projectId</td><td class="py-2 pr-4 text-gray-400">string</td><td class="py-2 text-gray-300">Optional. Filter towers by project ID.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "items": [
+    {
+      "id": "clxyz...",
+      "projectId": "clpqr...",
+      "name": "Tower A",
+      "floors": 20,
+      "meta": {},
+      "createdAt": "2025-01-10T09:00:00.000Z",
+      "updatedAt": "2025-06-01T12:00:00.000Z"
+    }
+  ]
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Create Tower -->
+        <div id="tower-create" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/inventory/towers</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:write</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Creates a new tower inside a project.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "projectId": "clpqr...",  // required — string
+  "name": "Tower B",        // optional — max 200 chars
+  "floors": 25,             // optional — integer >= 0
+  "meta": {}                // optional — any JSON
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 201</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "data": {
+    "id": "clxyz...",
+    "projectId": "clpqr...",
+    "name": "Tower B",
+    "floors": 25,
+    "meta": {},
+    "createdAt": "2025-01-10T09:00:00.000Z",
+    "updatedAt": "2025-01-10T09:00:00.000Z"
+  }
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Get Tower -->
+        <div id="tower-get" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/inventory/towers/:id</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:read</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Fetches a single tower by its ID.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "data": {
+    "id": "clxyz...",
+    "projectId": "clpqr...",
+    "name": "Tower A",
+    "floors": 20,
+    "meta": {},
+    "createdAt": "2025-01-10T09:00:00.000Z",
+    "updatedAt": "2025-06-01T12:00:00.000Z"
+  }
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 404</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-red-300">{ "ok": false, "error": "not found" }</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Update Tower -->
+        <div id="tower-update" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-put text-xs font-bold px-3 py-1 rounded-full font-mono">PUT</span>
+            <code class="text-white font-mono text-sm">/api/inventory/towers/:id</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:write</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Updates a tower. All fields are optional.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "projectId": "clpqr...", // optional
+  "name": "Tower B",       // optional
+  "floors": 30,            // optional
+  "meta": {}               // optional
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{ "ok": true, "data": { /* updated Tower object */ } }</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delete Tower -->
+        <div id="tower-delete" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-delete text-xs font-bold px-3 py-1 rounded-full font-mono">DELETE</span>
+            <code class="text-white font-mono text-sm">/api/inventory/towers/:id</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:delete</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Deletes a tower by ID.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{ "ok": true }</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════
+           UNITS
+      ══════════════════════════════════════════ -->
+      <section>
+        <h2 class="text-2xl font-bold text-white mb-1">Units</h2>
+        <p class="text-gray-400 text-sm mb-8">Base path: <code class="text-indigo-400 font-mono">/api/inventory/units</code></p>
+
+        <!-- List Units -->
+        <div id="unit-list" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/inventory/units</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:read</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Returns a paginated, filterable list of units.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Query Parameters</p>
+              <table class="text-sm w-full">
+                <thead><tr class="text-gray-500 border-b border-gray-700"><th class="text-left py-1 pr-4">Param</th><th class="text-left py-1 pr-4">Type</th><th class="text-left py-1">Description</th></tr></thead>
+                <tbody class="divide-y divide-gray-800">
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">page</td><td class="py-2 pr-4 text-gray-400">number</td><td class="py-2 text-gray-300">Page number (default 1)</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">limit</td><td class="py-2 pr-4 text-gray-400">number</td><td class="py-2 text-gray-300">Items per page (default 20)</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">projectId</td><td class="py-2 pr-4 text-gray-400">string</td><td class="py-2 text-gray-300">Filter by project</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">towerId</td><td class="py-2 pr-4 text-gray-400">string</td><td class="py-2 text-gray-300">Filter by tower</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">status</td><td class="py-2 pr-4 text-gray-400">string</td><td class="py-2 text-gray-300"><code>AVAILABLE | BLOCKED | BOOKED | SOLD</code></td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">bedrooms</td><td class="py-2 pr-4 text-gray-400">number</td><td class="py-2 text-gray-300">Exact bedroom count</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">bathrooms</td><td class="py-2 pr-4 text-gray-400">number</td><td class="py-2 text-gray-300">Exact bathroom count</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">priceMin</td><td class="py-2 pr-4 text-gray-400">number</td><td class="py-2 text-gray-300">Min price filter</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">priceMax</td><td class="py-2 pr-4 text-gray-400">number</td><td class="py-2 text-gray-300">Max price filter</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">sizeMin</td><td class="py-2 pr-4 text-gray-400">number</td><td class="py-2 text-gray-300">Min size (sqft)</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">sizeMax</td><td class="py-2 pr-4 text-gray-400">number</td><td class="py-2 text-gray-300">Max size (sqft)</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">q</td><td class="py-2 pr-4 text-gray-400">string</td><td class="py-2 text-gray-300">Search by unitNumber or facing</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">sort</td><td class="py-2 pr-4 text-gray-400">string</td><td class="py-2 text-gray-300"><code>price_asc | price_desc | created_desc | created_asc</code></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "items": [
+    {
+      "id": "clunit1...",
+      "projectId": "clpqr...",
+      "towerId": "cltow1...",
+      "floor": 5,
+      "unitNumber": "501",
+      "sizeSqFt": 1200.0,
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "facing": "North",
+      "price": "8500000",
+      "status": "AVAILABLE",
+      "meta": {},
+      "createdAt": "2025-01-10T09:00:00.000Z",
+      "updatedAt": "2025-06-01T12:00:00.000Z"
+    }
+  ],
+  "meta": {
+    "page": 1,
+    "limit": 20,
+    "total": 150
+  }
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Create Unit -->
+        <div id="unit-create" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/inventory/units</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:write</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Creates a new unit under a project and optionally a tower.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "projectId": "clpqr...",  // required — string
+  "towerId": "cltow1...",   // optional — null or string
+  "floor": 5,               // optional — integer or null
+  "unitNumber": "501",      // optional — string or null
+  "sizeSqFt": 1200.0,       // optional — number or null
+  "bedrooms": 3,            // optional — integer or null
+  "bathrooms": 2,           // optional — integer or null
+  "facing": "North",        // optional — string or null
+  "price": 8500000,         // optional — number/bigint or null
+  "status": "AVAILABLE",    // optional — defaults to AVAILABLE
+  "meta": {}                // optional — any JSON
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 201</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "data": { /* created Unit object */ }
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Get Unit -->
+        <div id="unit-get" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/inventory/units/:id</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:read</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Fetches a single unit with its related data (images, active reservations, listings, and tower).</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "data": {
+    "id": "clunit1...",
+    "projectId": "clpqr...",
+    "towerId": "cltow1...",
+    "floor": 5,
+    "unitNumber": "501",
+    "sizeSqFt": 1200.0,
+    "bedrooms": 3,
+    "bathrooms": 2,
+    "facing": "North",
+    "price": "8500000",
+    "status": "AVAILABLE",
+    "meta": {},
+    "createdAt": "2025-01-10T09:00:00.000Z",
+    "updatedAt": "2025-06-01T12:00:00.000Z",
+    "tower": { "id": "cltow1...", "name": "Tower A", "floors": 20 },
+    "images": [
+      { "id": "climg1...", "url": "https://...", "meta": { "position": 0 } }
+    ],
+    "reservations": [
+      { "id": "clres1...", "status": "ACTIVE", "expiresAt": "2025-06-01T12:15:00.000Z" }
+    ],
+    "listings": [
+      { "id": "cllist1...", "title": "3BHK North Facing", "status": "AVAILABLE" }
+    ]
+  }
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Update Unit -->
+        <div id="unit-update" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-put text-xs font-bold px-3 py-1 rounded-full font-mono">PUT</span>
+            <code class="text-white font-mono text-sm">/api/inventory/units/:id</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:write</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Updates a unit. <strong class="text-red-400">Blocked if unit status is SOLD.</strong> Uses Redis lock to prevent concurrent updates.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "floor": 6,
+  "unitNumber": "601",
+  "sizeSqFt": 1400.0,
+  "bedrooms": 4,
+  "bathrooms": 3,
+  "facing": "East",
+  "price": 9500000,
+  "status": "AVAILABLE",
+  "meta": {}
+  // All fields optional
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{ "ok": true, "data": { /* updated Unit object */ } }</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 409 (unit is SOLD)</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-red-300">{ "ok": false, "error": "Unit is sold and cannot be modified." }</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delete Unit -->
+        <div id="unit-delete" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-delete text-xs font-bold px-3 py-1 rounded-full font-mono">DELETE</span>
+            <code class="text-white font-mono text-sm">/api/inventory/units/:id</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:delete</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Permanently deletes a unit. Uses Redis lock to prevent concurrent deletes.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{ "ok": true }</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sell Unit -->
+        <div id="unit-sell" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/inventory/units/:id/sell</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:manage</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Marks a unit as <strong class="text-white">SOLD</strong>, cancels all active reservations on it, and closes any linked listings. This is an irreversible action.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "price": 9000000,   // optional — final sale price
+  "note": "Sold to Mr. X"  // optional
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "data": {
+    "id": "clunit1...",
+    "status": "SOLD",
+    /* ... rest of Unit fields */
+  }
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Upload Unit Images -->
+        <div id="unit-img-upload" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/inventory/units/:id/images</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:write</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Uploads one or more images for a unit. Accepts <code class="text-amber-300">multipart/form-data</code>.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request — <code class="text-amber-300">multipart/form-data</code></p>
+              <table class="text-sm w-full">
+                <thead><tr class="text-gray-500 border-b border-gray-700"><th class="text-left py-1 pr-4">Field</th><th class="text-left py-1 pr-4">Type</th><th class="text-left py-1">Description</th></tr></thead>
+                <tbody>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">images</td><td class="py-2 pr-4 text-gray-400">file[]</td><td class="py-2 text-gray-300">One or more image files (JPEG, PNG, WebP)</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 201</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "data": [
+    {
+      "id": "climg1...",
+      "unitId": "clunit1...",
+      "url": "https://storage.example.com/units/clunit1/img1.jpg",
+      "meta": { "position": 0 },
+      "createdAt": "2025-06-01T12:00:00.000Z"
+    }
+  ]
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- List Unit Images -->
+        <div id="unit-img-list" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/inventory/units/:id/images</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:read</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Returns all images for a unit, sorted by <code class="text-amber-300">meta.position</code> ascending.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "items": [
+    {
+      "id": "climg1...",
+      "unitId": "clunit1...",
+      "url": "https://storage.example.com/units/clunit1/img1.jpg",
+      "meta": { "position": 0 },
+      "createdAt": "2025-06-01T12:00:00.000Z"
+    }
+  ]
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delete Unit Image -->
+        <div id="unit-img-delete" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-delete text-xs font-bold px-3 py-1 rounded-full font-mono">DELETE</span>
+            <code class="text-white font-mono text-sm">/api/inventory/units/images/:imageId</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:delete</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Deletes a unit image record and removes the file from storage.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{ "ok": true }</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reorder Unit Images -->
+        <div id="unit-img-reorder" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/inventory/units/:id/images/reorder</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:write</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Reorders images by providing an ordered array of image IDs. The position index is stored in <code class="text-amber-300">meta.position</code>.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "order": ["climg2...", "climg1...", "climg3..."]  // required — array of image IDs in desired order
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "data": [ /* reordered UnitImage[] with updated meta.position */ ]
+}</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════
+           LISTINGS
+      ══════════════════════════════════════════ -->
+      <section>
+        <h2 class="text-2xl font-bold text-white mb-1">Listings</h2>
+        <p class="text-gray-400 text-sm mb-8">Base path: <code class="text-indigo-400 font-mono">/api/inventory/listings</code></p>
+
+        <!-- List Listings -->
+        <div id="listing-list" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/inventory/listings</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:read</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Returns a paginated, filterable list of listings.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Query Parameters</p>
+              <table class="text-sm w-full">
+                <thead><tr class="text-gray-500 border-b border-gray-700"><th class="text-left py-1 pr-4">Param</th><th class="text-left py-1 pr-4">Type</th><th class="text-left py-1">Description</th></tr></thead>
+                <tbody class="divide-y divide-gray-800">
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">page</td><td class="py-2 pr-4 text-gray-400">number</td><td class="py-2 text-gray-300">Page number (default 1)</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">limit</td><td class="py-2 pr-4 text-gray-400">number</td><td class="py-2 text-gray-300">Items per page (default 20)</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">city</td><td class="py-2 pr-4 text-gray-400">string</td><td class="py-2 text-gray-300">Filter by city</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">locality</td><td class="py-2 pr-4 text-gray-400">string</td><td class="py-2 text-gray-300">Filter by locality</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">type</td><td class="py-2 pr-4 text-gray-400">string</td><td class="py-2 text-gray-300"><code>SALE | RENT | BOTH</code></td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">status</td><td class="py-2 pr-4 text-gray-400">string</td><td class="py-2 text-gray-300"><code>AVAILABLE | UNDER_OFFER | CLOSED</code></td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">projectId</td><td class="py-2 pr-4 text-gray-400">string</td><td class="py-2 text-gray-300">Filter by project</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">unitId</td><td class="py-2 pr-4 text-gray-400">string</td><td class="py-2 text-gray-300">Filter by linked unit</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">bedrooms</td><td class="py-2 pr-4 text-gray-400">number</td><td class="py-2 text-gray-300">Exact bedroom count</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">bathrooms</td><td class="py-2 pr-4 text-gray-400">number</td><td class="py-2 text-gray-300">Exact bathroom count</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">priceMin</td><td class="py-2 pr-4 text-gray-400">number</td><td class="py-2 text-gray-300">Min price</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">priceMax</td><td class="py-2 pr-4 text-gray-400">number</td><td class="py-2 text-gray-300">Max price</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">sqftMin</td><td class="py-2 pr-4 text-gray-400">number</td><td class="py-2 text-gray-300">Min area (sqft)</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">sqftMax</td><td class="py-2 pr-4 text-gray-400">number</td><td class="py-2 text-gray-300">Max area (sqft)</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">q</td><td class="py-2 pr-4 text-gray-400">string</td><td class="py-2 text-gray-300">Search by title, ownerName, or locality</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">sort</td><td class="py-2 pr-4 text-gray-400">string</td><td class="py-2 text-gray-300"><code>price_asc | price_desc | created_desc | created_asc</code></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "items": [
+    {
+      "id": "cllist1...",
+      "title": "Spacious 3BHK in Andheri",
+      "type": "SALE",
+      "ownerName": "Rahul Mehta",
+      "ownerPhone": "+919876543210",
+      "ownerEmail": "rahul@example.com",
+      "projectId": "clpqr...",
+      "unitId": "clunit1...",
+      "city": "Mumbai",
+      "locality": "Andheri West",
+      "price": "8500000",
+      "bedrooms": 3,
+      "bathrooms": 2,
+      "sqft": 1200.0,
+      "status": "AVAILABLE",
+      "meta": {},
+      "createdAt": "2025-01-10T09:00:00.000Z",
+      "updatedAt": "2025-06-01T12:00:00.000Z"
+    }
+  ],
+  "meta": { "page": 1, "limit": 20, "total": 85 }
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Create Listing -->
+        <div id="listing-create" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/inventory/listings</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:write</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Creates a new listing, optionally linked to an existing project/unit.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "title": "Spacious 3BHK in Andheri",  // required — string
+  "type": "SALE",                         // required — "SALE" | "RENT" | "BOTH"
+  "ownerName": "Rahul Mehta",            // optional
+  "ownerPhone": "+919876543210",         // optional
+  "ownerEmail": "rahul@example.com",     // optional
+  "projectId": "clpqr...",              // optional
+  "unitId": "clunit1...",               // optional
+  "city": "Mumbai",                      // optional
+  "locality": "Andheri West",           // optional
+  "price": 8500000,                      // optional — number/bigint
+  "bedrooms": 3,                         // optional — integer
+  "bathrooms": 2,                        // optional — integer
+  "sqft": 1200.0,                        // optional — number
+  "status": "AVAILABLE",                 // optional — defaults to AVAILABLE
+  "meta": {}                             // optional — any JSON
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 201</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{ "ok": true, "data": { /* created Listing object */ } }</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Get Listing -->
+        <div id="listing-get" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/inventory/listings/:id</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:read</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Fetches a single listing with related data (images, project, unit, reservations).</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "data": {
+    "id": "cllist1...",
+    "title": "Spacious 3BHK in Andheri",
+    "type": "SALE",
+    "status": "AVAILABLE",
+    /* ... all listing fields ... */
+    "project": { "id": "clpqr...", "name": "Skyline Heights" },
+    "unit": { "id": "clunit1...", "unitNumber": "501", "floor": 5 },
+    "images": [
+      { "id": "climg1...", "url": "https://...", "meta": { "position": 0 } }
+    ],
+    "reservations": [
+      { "id": "clres1...", "status": "ACTIVE", "expiresAt": "2025-06-01T12:15:00.000Z" }
+    ]
+  }
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Update Listing -->
+        <div id="listing-update" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-put text-xs font-bold px-3 py-1 rounded-full font-mono">PUT</span>
+            <code class="text-white font-mono text-sm">/api/inventory/listings/:id</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:write</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Updates a listing. <strong class="text-red-400">Blocked if status is CLOSED or SOLD.</strong> Uses Redis lock.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body (all optional)</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "title": "Updated Title",
+  "type": "RENT",
+  "price": 45000,
+  "city": "Pune",
+  "locality": "Koregaon Park",
+  "bedrooms": 2,
+  "bathrooms": 1,
+  "sqft": 900.0,
+  "ownerName": "Priya Shah",
+  "ownerPhone": "+919876543211",
+  "ownerEmail": "priya@example.com",
+  "meta": {}
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{ "ok": true, "data": { /* updated Listing object */ } }</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 409 (listing is CLOSED)</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-red-300">{ "ok": false, "error": "Listing is closed and cannot be modified." }</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Close Listing -->
+        <div id="listing-close" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/inventory/listings/:id/close</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:manage</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">
+              Closes a listing, cancels all active reservations, and optionally marks the linked unit as <strong class="text-white">SOLD</strong>.
+            </p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "note": "Deal finalized with buyer"  // optional
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "data": {
+    "id": "cllist1...",
+    "status": "CLOSED",
+    /* ... rest of Listing fields */
+  }
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delete Listing -->
+        <div id="listing-delete" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-delete text-xs font-bold px-3 py-1 rounded-full font-mono">DELETE</span>
+            <code class="text-white font-mono text-sm">/api/inventory/listings/:id</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:delete</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Permanently deletes a listing. Uses Redis lock.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{ "ok": true }</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Upload Listing Images -->
+        <div id="listing-img-upload" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/inventory/listings/:id/images</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:write</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Uploads one or more images for a listing. Accepts <code class="text-amber-300">multipart/form-data</code>.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request — <code class="text-amber-300">multipart/form-data</code></p>
+              <table class="text-sm w-full">
+                <tbody>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">images</td><td class="py-2 pr-4 text-gray-400">file[]</td><td class="py-2 text-gray-300">One or more image files (JPEG, PNG, WebP)</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 201</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "data": [
+    {
+      "id": "climg2...",
+      "listingId": "cllist1...",
+      "url": "https://storage.example.com/listings/cllist1/img1.jpg",
+      "meta": { "position": 0 },
+      "createdAt": "2025-06-01T12:00:00.000Z"
+    }
+  ]
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- List Listing Images -->
+        <div id="listing-img-list" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/inventory/listings/:id/images</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:read</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Returns all images for a listing, sorted by <code class="text-amber-300">meta.position</code> ascending.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "items": [ /* ListingImage[] sorted by position */ ]
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delete Listing Image -->
+        <div id="listing-img-delete" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-delete text-xs font-bold px-3 py-1 rounded-full font-mono">DELETE</span>
+            <code class="text-white font-mono text-sm">/api/inventory/listings/images/:imageId</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:delete</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Deletes a listing image record and removes the file from storage.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{ "ok": true }</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reorder Listing Images -->
+        <div id="listing-img-reorder" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/inventory/listings/:id/images/reorder</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:write</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Reorders listing images by supplying an ordered array of image IDs.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "order": ["climg3...", "climg2...", "climg1..."]
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "data": [ /* reordered ListingImage[] */ ]
+}</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════
+           RESERVATIONS
+      ══════════════════════════════════════════ -->
+      <section>
+        <h2 class="text-2xl font-bold text-white mb-1">Reservations</h2>
+        <p class="text-gray-400 text-sm mb-3">Base path: <code class="text-indigo-400 font-mono">/api/inventory/reservations</code></p>
+        <div class="bg-amber-950 border border-amber-800 rounded-xl p-4 mb-8 text-sm text-amber-200">
+          <strong>Business rules:</strong> Exactly one of <code>unitId</code> or <code>listingId</code> must be provided per reservation.
+          Creating a reservation sets the linked unit to <code>BLOCKED</code> or listing to <code>UNDER_OFFER</code>.
+          Default TTL is <strong>15 minutes</strong> (configurable via <code>DEFAULT_RESERVATION_TTL_MS</code> env var).
+          Cancelling a reservation restores the unit/listing status back to <code>AVAILABLE</code>.
+        </div>
+
+        <!-- List Reservations -->
+        <div id="res-list" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/inventory/reservations</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:read</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Returns all reservations, optionally filtered by user or status.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Query Parameters</p>
+              <table class="text-sm w-full">
+                <thead><tr class="text-gray-500 border-b border-gray-700"><th class="text-left py-1 pr-4">Param</th><th class="text-left py-1 pr-4">Type</th><th class="text-left py-1">Description</th></tr></thead>
+                <tbody class="divide-y divide-gray-800">
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">userId</td><td class="py-2 pr-4 text-gray-400">string</td><td class="py-2 text-gray-300">Filter by assigned user</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">status</td><td class="py-2 pr-4 text-gray-400">string</td><td class="py-2 text-gray-300"><code>ACTIVE | EXPIRED | CONFIRMED | CANCELLED</code></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "items": [
+    {
+      "id": "clres1...",
+      "leadId": "cllead1...",
+      "unitId": "clunit1...",
+      "listingId": null,
+      "userId": "cluser1...",
+      "status": "ACTIVE",
+      "expiresAt": "2025-06-01T12:15:00.000Z",
+      "reservedAt": "2025-06-01T12:00:00.000Z",
+      "confirmedAt": null,
+      "cancelledAt": null,
+      "note": "Hold for client walkthrough",
+      "meta": {},
+      "createdAt": "2025-06-01T12:00:00.000Z",
+      "updatedAt": "2025-06-01T12:00:00.000Z"
+    }
+  ]
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Create Reservation -->
+        <div id="res-create" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/inventory/reservations</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:write</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">
+              Creates a reservation, sets unit to <code class="text-amber-300">BLOCKED</code> or listing to <code class="text-amber-300">UNDER_OFFER</code>,
+              and enqueues an automatic expiry job (default 15 min TTL).
+            </p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  // Provide EXACTLY ONE of unitId or listingId
+  "unitId": "clunit1...",        // required if no listingId
+  "listingId": null,             // required if no unitId (set to null)
+
+  "leadId": "cllead1...",        // optional — link to a lead
+  "userId": "cluser1...",        // optional — assign to a user
+  "expiresAt": "2025-06-01T12:15:00.000Z", // optional ISO string — defaults to now + 15 min
+  "note": "Hold for client walkthrough",   // optional
+  "meta": {}                     // optional
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 201</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "data": {
+    "id": "clres1...",
+    "unitId": "clunit1...",
+    "listingId": null,
+    "leadId": "cllead1...",
+    "userId": "cluser1...",
+    "status": "ACTIVE",
+    "expiresAt": "2025-06-01T12:15:00.000Z",
+    "reservedAt": "2025-06-01T12:00:00.000Z",
+    "confirmedAt": null,
+    "cancelledAt": null,
+    "note": "Hold for client walkthrough",
+    "meta": {},
+    "createdAt": "2025-06-01T12:00:00.000Z",
+    "updatedAt": "2025-06-01T12:00:00.000Z"
+  }
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 400 (validation error)</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-red-300">{ "ok": false, "error": "Exactly one of unitId or listingId must be provided." }</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Get Reservation -->
+        <div id="res-get" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/inventory/reservations/:id</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:read</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Fetches a single reservation with its related lead, unit, and listing.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "data": {
+    "id": "clres1...",
+    "status": "ACTIVE",
+    "expiresAt": "2025-06-01T12:15:00.000Z",
+    /* ... all reservation fields ... */
+    "lead": { "id": "cllead1...", "name": "Amit Kumar", "phone": "+919876543210" },
+    "unit": { "id": "clunit1...", "unitNumber": "501", "status": "BLOCKED" },
+    "listing": null
+  }
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Update Reservation -->
+        <div id="res-update" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-patch text-xs font-bold px-3 py-1 rounded-full font-mono">PATCH</span>
+            <code class="text-white font-mono text-sm">/api/inventory/reservations/:id</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:write</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Partially updates a reservation's status or note fields.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body (all optional)</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "status": "CONFIRMED",                  // "ACTIVE" | "EXPIRED" | "CONFIRMED" | "CANCELLED"
+  "confirmedAt": "2025-06-01T13:00:00.000Z",  // ISO string
+  "cancelledAt": null,                    // ISO string or null
+  "note": "Confirmed after site visit"
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{ "ok": true, "data": { /* updated Reservation object */ } }</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cancel Reservation -->
+        <div id="res-cancel" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/inventory/reservations/:id/cancel</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">inventory:write</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">
+              Cancels an <strong class="text-white">ACTIVE</strong> reservation. Restores the linked unit status to
+              <code class="text-amber-300">AVAILABLE</code> or listing to <code class="text-amber-300">AVAILABLE</code>.
+              Only <code>ACTIVE</code> reservations can be cancelled.
+            </p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">No Request Body required.</p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "data": {
+    "id": "clres1...",
+    "status": "CANCELLED",
+    "cancelledAt": "2025-06-01T12:10:00.000Z",
+    /* ... rest of Reservation fields */
+  }
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 409 (not ACTIVE)</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-red-300">{ "ok": false, "error": "Only ACTIVE reservations can be cancelled." }</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════
+           ENUMS
+      ══════════════════════════════════════════ -->
+      <section id="enums">
+        <h2 class="text-2xl font-bold text-white mb-6">Enums &amp; Statuses</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+            <h3 class="text-white font-semibold mb-3">UnitStatus</h3>
+            <table class="text-sm w-full">
+              <tbody class="divide-y divide-gray-800">
+                <tr><td class="py-2 pr-4 font-mono text-green-400">AVAILABLE</td><td class="py-2 text-gray-300">Unit is open for reservation or sale</td></tr>
+                <tr><td class="py-2 pr-4 font-mono text-amber-400">BLOCKED</td><td class="py-2 text-gray-300">Temporarily held by an active reservation</td></tr>
+                <tr><td class="py-2 pr-4 font-mono text-blue-400">BOOKED</td><td class="py-2 text-gray-300">Formally booked</td></tr>
+                <tr><td class="py-2 pr-4 font-mono text-red-400">SOLD</td><td class="py-2 text-gray-300">Sold — no further modifications allowed</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+            <h3 class="text-white font-semibold mb-3">ListingStatus</h3>
+            <table class="text-sm w-full">
+              <tbody class="divide-y divide-gray-800">
+                <tr><td class="py-2 pr-4 font-mono text-green-400">AVAILABLE</td><td class="py-2 text-gray-300">Listing is open</td></tr>
+                <tr><td class="py-2 pr-4 font-mono text-amber-400">UNDER_OFFER</td><td class="py-2 text-gray-300">Active reservation placed against listing</td></tr>
+                <tr><td class="py-2 pr-4 font-mono text-red-400">CLOSED</td><td class="py-2 text-gray-300">Deal closed — no modifications allowed</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+            <h3 class="text-white font-semibold mb-3">ListingType</h3>
+            <table class="text-sm w-full">
+              <tbody class="divide-y divide-gray-800">
+                <tr><td class="py-2 pr-4 font-mono text-indigo-300">SALE</td><td class="py-2 text-gray-300">Property for sale</td></tr>
+                <tr><td class="py-2 pr-4 font-mono text-indigo-300">RENT</td><td class="py-2 text-gray-300">Property for rent</td></tr>
+                <tr><td class="py-2 pr-4 font-mono text-indigo-300">BOTH</td><td class="py-2 text-gray-300">Available for sale or rent</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="bg-gray-900 rounded-xl border border-gray-800 p-5">
+            <h3 class="text-white font-semibold mb-3">ReservationStatus</h3>
+            <table class="text-sm w-full">
+              <tbody class="divide-y divide-gray-800">
+                <tr><td class="py-2 pr-4 font-mono text-green-400">ACTIVE</td><td class="py-2 text-gray-300">Reservation is live; unit/listing is held</td></tr>
+                <tr><td class="py-2 pr-4 font-mono text-gray-400">EXPIRED</td><td class="py-2 text-gray-300">TTL passed without confirmation</td></tr>
+                <tr><td class="py-2 pr-4 font-mono text-blue-400">CONFIRMED</td><td class="py-2 text-gray-300">Reservation manually confirmed</td></tr>
+                <tr><td class="py-2 pr-4 font-mono text-red-400">CANCELLED</td><td class="py-2 text-gray-300">Manually cancelled; unit/listing freed</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════
+           SUMMARY TABLE
+      ══════════════════════════════════════════ -->
+      <section id="summary">
+        <h2 class="text-2xl font-bold text-white mb-6">All Endpoints Summary</h2>
+        <div class="overflow-x-auto">
+          <table class="text-sm w-full">
+            <thead>
+              <tr class="text-gray-500 border-b border-gray-700 text-left">
+                <th class="py-2 pr-4">#</th>
+                <th class="py-2 pr-4">Method</th>
+                <th class="py-2 pr-6">Path</th>
+                <th class="py-2 pr-4">Permission</th>
+                <th class="py-2">Description</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800">
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">1</td><td class="py-2 pr-4"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/projects</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:read</td><td class="py-2 text-gray-300">List all projects</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">2</td><td class="py-2 pr-4"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/projects</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:write</td><td class="py-2 text-gray-300">Create project</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">3</td><td class="py-2 pr-4"><span class="badge-put text-xs font-mono font-bold px-2 py-0.5 rounded">PUT</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/projects/:id</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:write</td><td class="py-2 text-gray-300">Update project</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">4</td><td class="py-2 pr-4"><span class="badge-delete text-xs font-mono font-bold px-2 py-0.5 rounded">DELETE</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/projects/:id</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:delete</td><td class="py-2 text-gray-300">Delete project</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">5</td><td class="py-2 pr-4"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/towers</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:read</td><td class="py-2 text-gray-300">List towers</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">6</td><td class="py-2 pr-4"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/towers</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:write</td><td class="py-2 text-gray-300">Create tower</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">7</td><td class="py-2 pr-4"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/towers/:id</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:read</td><td class="py-2 text-gray-300">Get tower</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">8</td><td class="py-2 pr-4"><span class="badge-put text-xs font-mono font-bold px-2 py-0.5 rounded">PUT</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/towers/:id</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:write</td><td class="py-2 text-gray-300">Update tower</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">9</td><td class="py-2 pr-4"><span class="badge-delete text-xs font-mono font-bold px-2 py-0.5 rounded">DELETE</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/towers/:id</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:delete</td><td class="py-2 text-gray-300">Delete tower</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">10</td><td class="py-2 pr-4"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/units</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:read</td><td class="py-2 text-gray-300">List units (paginated + filters)</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">11</td><td class="py-2 pr-4"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/units</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:write</td><td class="py-2 text-gray-300">Create unit</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">12</td><td class="py-2 pr-4"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/units/:id</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:read</td><td class="py-2 text-gray-300">Get unit (with images, reservations, listings)</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">13</td><td class="py-2 pr-4"><span class="badge-put text-xs font-mono font-bold px-2 py-0.5 rounded">PUT</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/units/:id</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:write</td><td class="py-2 text-gray-300">Update unit (blocked if SOLD)</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">14</td><td class="py-2 pr-4"><span class="badge-delete text-xs font-mono font-bold px-2 py-0.5 rounded">DELETE</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/units/:id</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:delete</td><td class="py-2 text-gray-300">Delete unit</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">15</td><td class="py-2 pr-4"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/units/:id/sell</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:manage</td><td class="py-2 text-gray-300">Mark unit as SOLD</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">16</td><td class="py-2 pr-4"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/units/:id/images</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:write</td><td class="py-2 text-gray-300">Upload unit images (multipart)</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">17</td><td class="py-2 pr-4"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/units/:id/images</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:read</td><td class="py-2 text-gray-300">List unit images</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">18</td><td class="py-2 pr-4"><span class="badge-delete text-xs font-mono font-bold px-2 py-0.5 rounded">DELETE</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/units/images/:imageId</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:delete</td><td class="py-2 text-gray-300">Delete unit image</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">19</td><td class="py-2 pr-4"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/units/:id/images/reorder</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:write</td><td class="py-2 text-gray-300">Reorder unit images</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">20</td><td class="py-2 pr-4"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/listings</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:read</td><td class="py-2 text-gray-300">List listings (paginated + filters)</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">21</td><td class="py-2 pr-4"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/listings</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:write</td><td class="py-2 text-gray-300">Create listing</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">22</td><td class="py-2 pr-4"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/listings/:id</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:read</td><td class="py-2 text-gray-300">Get listing (with images, project, unit)</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">23</td><td class="py-2 pr-4"><span class="badge-put text-xs font-mono font-bold px-2 py-0.5 rounded">PUT</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/listings/:id</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:write</td><td class="py-2 text-gray-300">Update listing (blocked if CLOSED)</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">24</td><td class="py-2 pr-4"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/listings/:id/close</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:manage</td><td class="py-2 text-gray-300">Close listing, cancel reservations</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">25</td><td class="py-2 pr-4"><span class="badge-delete text-xs font-mono font-bold px-2 py-0.5 rounded">DELETE</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/listings/:id</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:delete</td><td class="py-2 text-gray-300">Delete listing</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">26</td><td class="py-2 pr-4"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/listings/:id/images</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:write</td><td class="py-2 text-gray-300">Upload listing images (multipart)</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">27</td><td class="py-2 pr-4"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/listings/:id/images</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:read</td><td class="py-2 text-gray-300">List listing images</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">28</td><td class="py-2 pr-4"><span class="badge-delete text-xs font-mono font-bold px-2 py-0.5 rounded">DELETE</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/listings/images/:imageId</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:delete</td><td class="py-2 text-gray-300">Delete listing image</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">29</td><td class="py-2 pr-4"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/listings/:id/images/reorder</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:write</td><td class="py-2 text-gray-300">Reorder listing images</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">30</td><td class="py-2 pr-4"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/reservations</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:read</td><td class="py-2 text-gray-300">List reservations</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">31</td><td class="py-2 pr-4"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/reservations</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:write</td><td class="py-2 text-gray-300">Create reservation (auto-TTL + lock)</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">32</td><td class="py-2 pr-4"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/reservations/:id</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:read</td><td class="py-2 text-gray-300">Get reservation</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">33</td><td class="py-2 pr-4"><span class="badge-patch text-xs font-mono font-bold px-2 py-0.5 rounded">PATCH</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/reservations/:id</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:write</td><td class="py-2 text-gray-300">Partial update reservation</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-4 text-gray-500">34</td><td class="py-2 pr-4"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/inventory/reservations/:id/cancel</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">inventory:write</td><td class="py-2 text-gray-300">Cancel reservation, restore status</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="border-t border-gray-800 px-6 md:px-12 py-6 mt-12 text-sm text-gray-500 flex items-center justify-between">
+      <span>CRM Backend · Inventory Management API Reference</span>
+      <span>Generated Mar 2026</span>
+    </div>
+  </main>
+
+</body>
+</html>

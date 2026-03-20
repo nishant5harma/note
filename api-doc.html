@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRM API — Super Admin Reference</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { DEFAULT: '#6366f1', dark: '#4f46e5', light: '#a5b4fc' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    html { scroll-behavior: smooth; }
+    .method-get    { @apply bg-emerald-100 text-emerald-700 border border-emerald-300; }
+    .method-post   { @apply bg-blue-100   text-blue-700   border border-blue-300;   }
+    .method-put    { @apply bg-amber-100  text-amber-700  border border-amber-300;  }
+    .method-delete { @apply bg-red-100    text-red-700    border border-red-300;    }
+    pre { white-space: pre-wrap; word-break: break-all; }
+  </style>
+</head>
+<body class="bg-gray-950 text-gray-200 font-sans antialiased">
+
+  <!-- ─── Sidebar ─────────────────────────────────────────────────── -->
+  <aside class="fixed top-0 left-0 h-full w-64 bg-gray-900 border-r border-gray-800 overflow-y-auto z-30 hidden lg:flex flex-col">
+    <div class="px-6 py-5 border-b border-gray-800">
+      <span class="text-xs font-semibold tracking-widest text-indigo-400 uppercase">CRM Backend</span>
+      <h1 class="text-lg font-bold text-white mt-1">Super Admin API</h1>
+    </div>
+    <nav class="flex-1 px-4 py-4 space-y-1 text-sm">
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-2 pb-1">Auth</p>
+      <a href="#auth-login"   class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Login</a>
+      <a href="#auth-me"      class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Get Current User</a>
+      <a href="#auth-refresh" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Refresh Token</a>
+      <a href="#auth-logout"  class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Logout</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Users</p>
+      <a href="#user-create" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Create User</a>
+      <a href="#user-list"   class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">List Users</a>
+      <a href="#user-get"    class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Get User by ID</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Roles</p>
+      <a href="#role-create"           class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Create Role</a>
+      <a href="#role-list"             class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">List Roles</a>
+      <a href="#role-get"              class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Get Role by ID</a>
+      <a href="#role-update"           class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Update Role</a>
+      <a href="#role-delete"           class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Delete Role</a>
+      <a href="#role-assign-perm"      class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Assign Permission to Role</a>
+      <a href="#role-remove-perm"      class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Remove Permission from Role</a>
+      <a href="#role-get-perms"        class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Get Role Permissions</a>
+      <a href="#role-assign-user"      class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Assign Role to User</a>
+      <a href="#role-remove-user"      class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Remove Role from User</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Permissions</p>
+      <a href="#perm-create" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Create Permission</a>
+      <a href="#perm-list"   class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">List Permissions</a>
+      <a href="#perm-get"    class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Get Permission by ID</a>
+      <a href="#perm-update" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Update Permission</a>
+      <a href="#perm-delete" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Delete Permission</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Reference</p>
+      <a href="#all-permissions" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">All Seeded Permissions</a>
+    </nav>
+    <div class="px-6 py-4 border-t border-gray-800 text-xs text-gray-500">
+      Base URL: <span class="text-indigo-400 font-mono">/api</span>
+    </div>
+  </aside>
+
+  <!-- ─── Main ──────────────────────────────────────────────────────── -->
+  <main class="lg:ml-64 min-h-screen">
+
+    <!-- Hero -->
+    <div class="bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 border-b border-gray-800 px-6 md:px-12 py-12">
+      <div class="max-w-4xl">
+        <div class="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/30 rounded-full px-4 py-1.5 text-xs font-medium text-indigo-300 mb-4">
+          🔐 Super Admin Reference
+        </div>
+        <h1 class="text-4xl font-extrabold text-white tracking-tight">CRM Backend API</h1>
+        <p class="mt-3 text-gray-400 text-lg max-w-2xl">Complete endpoint reference for Auth, Users, Roles, and Permissions — scoped to the <span class="text-indigo-400 font-semibold">superadmin</span> role.</p>
+        <div class="mt-6 flex flex-wrap gap-3 text-sm">
+          <span class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-gray-300">Base URL: <code class="text-indigo-400">/api</code></span>
+          <span class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-gray-300">Auth: <code class="text-amber-400">Bearer &lt;token&gt;</code></span>
+          <span class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-gray-300">Format: <code class="text-emerald-400">application/json</code></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="px-6 md:px-12 py-10 max-w-5xl space-y-16">
+
+      <!-- ════════════════════════════════════════
+           AUTH
+      ════════════════════════════════════════ -->
+      <section>
+        <div class="flex items-center gap-3 mb-8">
+          <div class="w-8 h-8 rounded-lg bg-violet-500/20 border border-violet-500/40 flex items-center justify-center text-lg">🔑</div>
+          <h2 class="text-2xl font-bold text-white">Auth</h2>
+        </div>
+        <div class="space-y-6">
+
+          <!-- Login -->
+          <div id="auth-login" class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="flex flex-wrap items-center gap-3 px-6 py-4 border-b border-gray-800">
+              <span class="method-post text-xs font-bold px-2.5 py-1 rounded-md font-mono">POST</span>
+              <code class="text-gray-100 font-mono text-sm">/api/auth/login</code>
+              <span class="ml-auto text-sm text-gray-400">No auth required</span>
+            </div>
+            <div class="grid md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-800">
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Request Body</p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-green-300 font-mono">{
+  "email": "superadmin@example.com",
+  "password": "SuperSecurePassword123!"
+}</pre>
+                <div class="mt-4 space-y-2 text-sm">
+                  <div class="flex gap-2"><code class="text-indigo-300 w-24 shrink-0">email</code><span class="text-gray-400">string · required · valid email</span></div>
+                  <div class="flex gap-2"><code class="text-indigo-300 w-24 shrink-0">password</code><span class="text-gray-400">string · required</span></div>
+                </div>
+              </div>
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Response <span class="text-emerald-400">200</span></p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-emerald-300 font-mono">{
+  "accessToken": "eyJhbGciOiJIUzI1...",
+  "user": {
+    "id": "uuid",
+    "name": "Super Admin",
+    "email": "superadmin@example.com",
+    "roles": [{ "name": "superadmin" }]
+  }
+}</pre>
+                <p class="text-xs text-gray-500 mt-3">Refresh token is set as an <code class="text-amber-300">HttpOnly</code> cookie.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Get Me -->
+          <div id="auth-me" class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="flex flex-wrap items-center gap-3 px-6 py-4 border-b border-gray-800">
+              <span class="method-get text-xs font-bold px-2.5 py-1 rounded-md font-mono">GET</span>
+              <code class="text-gray-100 font-mono text-sm">/api/auth/me</code>
+              <span class="ml-auto text-sm text-amber-400">🔒 requireAuth</span>
+            </div>
+            <div class="grid md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-800">
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Headers</p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-amber-300 font-mono">Authorization: Bearer &lt;accessToken&gt;</pre>
+                <p class="text-sm text-gray-400 mt-3">No request body needed.</p>
+              </div>
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Response <span class="text-emerald-400">200</span></p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-emerald-300 font-mono">{
+  "user": {
+    "id": "uuid",
+    "name": "Super Admin",
+    "email": "superadmin@example.com",
+    "roles": [{ "id": "uuid", "name": "superadmin" }],
+    "permissions": ["user.read", "role.write", ...]
+  }
+}</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Refresh -->
+          <div id="auth-refresh" class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="flex flex-wrap items-center gap-3 px-6 py-4 border-b border-gray-800">
+              <span class="method-post text-xs font-bold px-2.5 py-1 rounded-md font-mono">POST</span>
+              <code class="text-gray-100 font-mono text-sm">/api/auth/refresh</code>
+              <span class="ml-auto text-sm text-amber-400">🔒 requireAuth</span>
+            </div>
+            <div class="grid md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-800">
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Request Body (optional)</p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-green-300 font-mono">{
+  "refreshToken": "eyJhbGciOi..."
+}</pre>
+                <p class="text-xs text-gray-500 mt-2">Or pass via <code class="text-amber-300">refreshToken</code> cookie.</p>
+              </div>
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Response <span class="text-emerald-400">200</span></p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-emerald-300 font-mono">{
+  "accessToken": "eyJhbGciOiJIUzI1..."
+}</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Logout -->
+          <div id="auth-logout" class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="flex flex-wrap items-center gap-3 px-6 py-4 border-b border-gray-800">
+              <span class="method-post text-xs font-bold px-2.5 py-1 rounded-md font-mono">POST</span>
+              <code class="text-gray-100 font-mono text-sm">/api/auth/logout</code>
+              <span class="ml-auto text-sm text-amber-400">🔒 requireAuth</span>
+            </div>
+            <div class="grid md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-800">
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Request Body (optional)</p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-green-300 font-mono">{
+  "refreshToken": "eyJhbGciOi..."
+}</pre>
+                <p class="text-xs text-gray-500 mt-2">Or pass via <code class="text-amber-300">refreshToken</code> cookie.</p>
+              </div>
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Response <span class="text-emerald-400">200</span></p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-emerald-300 font-mono">{
+  "message": "Logged out successfully"
+}</pre>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ════════════════════════════════════════
+           USERS
+      ════════════════════════════════════════ -->
+      <section>
+        <div class="flex items-center gap-3 mb-8">
+          <div class="w-8 h-8 rounded-lg bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-lg">👤</div>
+          <h2 class="text-2xl font-bold text-white">Users</h2>
+          <span class="text-sm text-gray-500">Permission required: <code class="text-indigo-400">user.write</code> / <code class="text-indigo-400">user.read</code></span>
+        </div>
+        <div class="space-y-6">
+
+          <!-- Create User -->
+          <div id="user-create" class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="flex flex-wrap items-center gap-3 px-6 py-4 border-b border-gray-800">
+              <span class="method-post text-xs font-bold px-2.5 py-1 rounded-md font-mono">POST</span>
+              <code class="text-gray-100 font-mono text-sm">/api/users</code>
+              <span class="ml-auto flex gap-2">
+                <span class="text-xs bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded px-2 py-0.5">user.write</span>
+                <span class="text-sm text-amber-400">🔒 requireAuth</span>
+              </span>
+            </div>
+            <div class="grid md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-800">
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Request Body</p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-green-300 font-mono">{
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "password": "SecurePass123!",
+  "roleIds": ["&lt;role-uuid&gt;"],
+  "teamId": "&lt;team-uuid&gt;"
+}</pre>
+                <div class="mt-4 space-y-2 text-sm">
+                  <div class="flex gap-2"><code class="text-indigo-300 w-24 shrink-0">name</code><span class="text-gray-400">string · required · min 2</span></div>
+                  <div class="flex gap-2"><code class="text-indigo-300 w-24 shrink-0">email</code><span class="text-gray-400">string · required · valid email</span></div>
+                  <div class="flex gap-2"><code class="text-indigo-300 w-24 shrink-0">password</code><span class="text-gray-400">string · required · min 6</span></div>
+                  <div class="flex gap-2"><code class="text-indigo-300 w-24 shrink-0">roleIds</code><span class="text-gray-400">UUID[] · required · min 1</span></div>
+                  <div class="flex gap-2"><code class="text-indigo-300 w-24 shrink-0">teamId</code><span class="text-gray-400">UUID · optional · adds as MEMBER</span></div>
+                </div>
+              </div>
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Response <span class="text-emerald-400">201</span></p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-emerald-300 font-mono">{
+  "user": {
+    "id": "uuid",
+    "name": "John Doe",
+    "email": "john.doe@example.com",
+    "roles": [{
+      "id": "uuid",
+      "name": "manager",
+      "description": "..."
+    }],
+    "teamMembers": [{
+      "teamId": "uuid",
+      "teamName": "Sales Team",
+      "role": "MEMBER",
+      "joinedAt": "2026-03-13T..."
+    }]
+  }
+}</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- List Users -->
+          <div id="user-list" class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="flex flex-wrap items-center gap-3 px-6 py-4 border-b border-gray-800">
+              <span class="method-get text-xs font-bold px-2.5 py-1 rounded-md font-mono">GET</span>
+              <code class="text-gray-100 font-mono text-sm">/api/users</code>
+              <span class="ml-auto flex gap-2">
+                <span class="text-xs bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded px-2 py-0.5">user.read</span>
+                <span class="text-sm text-amber-400">🔒 requireAuth</span>
+              </span>
+            </div>
+            <div class="grid md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-800">
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Headers</p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-amber-300 font-mono">Authorization: Bearer &lt;accessToken&gt;</pre>
+                <p class="text-sm text-gray-400 mt-3">No request body. Returns up to 100 users ordered by creation date.</p>
+              </div>
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Response <span class="text-emerald-400">200</span></p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-emerald-300 font-mono">{
+  "users": [{
+    "id": "uuid",
+    "name": "John Doe",
+    "email": "john.doe@example.com",
+    "roles": [{ "id": "uuid", "name": "manager" }],
+    "teamMembers": [{
+      "teamId": "uuid",
+      "teamName": "Sales",
+      "role": "MEMBER",
+      "joinedAt": "2026-03-13T..."
+    }]
+  }]
+}</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Get User -->
+          <div id="user-get" class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="flex flex-wrap items-center gap-3 px-6 py-4 border-b border-gray-800">
+              <span class="method-get text-xs font-bold px-2.5 py-1 rounded-md font-mono">GET</span>
+              <code class="text-gray-100 font-mono text-sm">/api/users/:id</code>
+              <span class="ml-auto flex gap-2">
+                <span class="text-xs bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded px-2 py-0.5">user.read</span>
+                <span class="text-sm text-amber-400">🔒 requireAuth</span>
+              </span>
+            </div>
+            <div class="grid md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-800">
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Path Param</p>
+                <div class="flex gap-2 text-sm"><code class="text-indigo-300 w-10 shrink-0">:id</code><span class="text-gray-400">UUID of the user</span></div>
+              </div>
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Response <span class="text-emerald-400">200</span></p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-emerald-300 font-mono">{
+  "user": {
+    "id": "uuid",
+    "name": "John Doe",
+    "email": "john.doe@example.com",
+    "roles": [{ "id": "uuid", "name": "manager" }],
+    "teamMembers": [...]
+  }
+}</pre>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ════════════════════════════════════════
+           ROLES
+      ════════════════════════════════════════ -->
+      <section>
+        <div class="flex items-center gap-3 mb-8">
+          <div class="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-lg">👑</div>
+          <h2 class="text-2xl font-bold text-white">Roles</h2>
+          <span class="text-sm text-gray-500">Base: <code class="text-indigo-400">/api/rbac/roles</code></span>
+        </div>
+        <div class="space-y-6">
+
+          <!-- Create Role -->
+          <div id="role-create" class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="flex flex-wrap items-center gap-3 px-6 py-4 border-b border-gray-800">
+              <span class="method-post text-xs font-bold px-2.5 py-1 rounded-md font-mono">POST</span>
+              <code class="text-gray-100 font-mono text-sm">/api/rbac/roles</code>
+              <span class="ml-auto flex gap-2">
+                <span class="text-xs bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded px-2 py-0.5">role.write</span>
+              </span>
+            </div>
+            <div class="grid md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-800">
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Request Body</p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-green-300 font-mono">{
+  "name": "sales_manager",
+  "description": "Manages sales team"
+}</pre>
+                <div class="mt-4 space-y-2 text-sm">
+                  <div class="flex gap-2"><code class="text-indigo-300 w-28 shrink-0">name</code><span class="text-gray-400">string · required · min 2</span></div>
+                  <div class="flex gap-2"><code class="text-indigo-300 w-28 shrink-0">description</code><span class="text-gray-400">string · optional</span></div>
+                </div>
+              </div>
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Response <span class="text-emerald-400">201</span></p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-emerald-300 font-mono">{
+  "id": "uuid",
+  "name": "sales_manager",
+  "description": "Manages sales team",
+  "createdAt": "2026-03-13T..."
+}</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- List Roles -->
+          <div id="role-list" class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="flex flex-wrap items-center gap-3 px-6 py-4 border-b border-gray-800">
+              <span class="method-get text-xs font-bold px-2.5 py-1 rounded-md font-mono">GET</span>
+              <code class="text-gray-100 font-mono text-sm">/api/rbac/roles</code>
+              <span class="ml-auto flex gap-2">
+                <span class="text-xs bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded px-2 py-0.5">role.read</span>
+              </span>
+            </div>
+            <div class="grid md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-800">
+              <div class="px-6 py-5 flex items-center">
+                <p class="text-sm text-gray-400">No request body. Returns all roles.</p>
+              </div>
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Response <span class="text-emerald-400">200</span></p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-emerald-300 font-mono">[
+  {
+    "id": "uuid",
+    "name": "superadmin",
+    "description": "Full access",
+    "createdAt": "2026-03-13T..."
+  }
+]</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Get Role -->
+          <div id="role-get" class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="flex flex-wrap items-center gap-3 px-6 py-4 border-b border-gray-800">
+              <span class="method-get text-xs font-bold px-2.5 py-1 rounded-md font-mono">GET</span>
+              <code class="text-gray-100 font-mono text-sm">/api/rbac/roles/:id</code>
+              <span class="ml-auto flex gap-2">
+                <span class="text-xs bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded px-2 py-0.5">role.read</span>
+              </span>
+            </div>
+            <div class="grid md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-800">
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Path Param</p>
+                <div class="flex gap-2 text-sm"><code class="text-indigo-300 w-10 shrink-0">:id</code><span class="text-gray-400">UUID of the role</span></div>
+              </div>
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Response <span class="text-emerald-400">200</span></p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-emerald-300 font-mono">{
+  "id": "uuid",
+  "name": "superadmin",
+  "description": "Full access",
+  "createdAt": "2026-03-13T..."
+}</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Update Role -->
+          <div id="role-update" class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="flex flex-wrap items-center gap-3 px-6 py-4 border-b border-gray-800">
+              <span class="method-put text-xs font-bold px-2.5 py-1 rounded-md font-mono">PUT</span>
+              <code class="text-gray-100 font-mono text-sm">/api/rbac/roles/:id</code>
+              <span class="ml-auto flex gap-2">
+                <span class="text-xs bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded px-2 py-0.5">role.write</span>
+              </span>
+            </div>
+            <div class="grid md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-800">
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Request Body (all optional)</p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-green-300 font-mono">{
+  "name": "new_name",
+  "description": "Updated description"
+}</pre>
+              </div>
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Response <span class="text-emerald-400">200</span></p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-emerald-300 font-mono">{
+  "id": "uuid",
+  "name": "new_name",
+  "description": "Updated description",
+  "updatedAt": "2026-03-13T..."
+}</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Delete Role -->
+          <div id="role-delete" class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="flex flex-wrap items-center gap-3 px-6 py-4 border-b border-gray-800">
+              <span class="method-delete text-xs font-bold px-2.5 py-1 rounded-md font-mono">DELETE</span>
+              <code class="text-gray-100 font-mono text-sm">/api/rbac/roles/:id</code>
+              <span class="ml-auto flex gap-2">
+                <span class="text-xs bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded px-2 py-0.5">role.delete</span>
+              </span>
+            </div>
+            <div class="grid md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-800">
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Path Param</p>
+                <div class="flex gap-2 text-sm"><code class="text-indigo-300 w-10 shrink-0">:id</code><span class="text-gray-400">UUID of the role to delete</span></div>
+              </div>
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Response <span class="text-emerald-400">204</span></p>
+                <p class="text-sm text-gray-400">No content returned on success.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Assign Permission to Role -->
+          <div id="role-assign-perm" class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="flex flex-wrap items-center gap-3 px-6 py-4 border-b border-gray-800">
+              <span class="method-post text-xs font-bold px-2.5 py-1 rounded-md font-mono">POST</span>
+              <code class="text-gray-100 font-mono text-sm">/api/rbac/roles/:id/permissions</code>
+              <span class="ml-auto flex gap-2">
+                <span class="text-xs bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded px-2 py-0.5">role.write</span>
+              </span>
+            </div>
+            <div class="grid md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-800">
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Request Body</p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-green-300 font-mono">{
+  "permissionId": "&lt;permission-uuid&gt;"
+}</pre>
+              </div>
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Response <span class="text-emerald-400">201</span></p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-emerald-300 font-mono">{
+  "roleId": "uuid",
+  "permissionId": "uuid",
+  "createdAt": "2026-03-13T..."
+}</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Remove Permission from Role -->
+          <div id="role-remove-perm" class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="flex flex-wrap items-center gap-3 px-6 py-4 border-b border-gray-800">
+              <span class="method-delete text-xs font-bold px-2.5 py-1 rounded-md font-mono">DELETE</span>
+              <code class="text-gray-100 font-mono text-sm">/api/rbac/roles/:id/permissions/:permId</code>
+              <span class="ml-auto flex gap-2">
+                <span class="text-xs bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded px-2 py-0.5">role.write</span>
+              </span>
+            </div>
+            <div class="grid md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-800">
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Path Params</p>
+                <div class="space-y-2 text-sm">
+                  <div class="flex gap-2"><code class="text-indigo-300 w-20 shrink-0">:id</code><span class="text-gray-400">Role UUID</span></div>
+                  <div class="flex gap-2"><code class="text-indigo-300 w-20 shrink-0">:permId</code><span class="text-gray-400">Permission UUID to unlink</span></div>
+                </div>
+              </div>
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Response <span class="text-emerald-400">200</span></p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-emerald-300 font-mono">{
+  "roleId": "uuid",
+  "permissionId": "uuid"
+}</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Get Role Permissions -->
+          <div id="role-get-perms" class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="flex flex-wrap items-center gap-3 px-6 py-4 border-b border-gray-800">
+              <span class="method-get text-xs font-bold px-2.5 py-1 rounded-md font-mono">GET</span>
+              <code class="text-gray-100 font-mono text-sm">/api/rbac/roles/:id/permissions</code>
+              <span class="ml-auto flex gap-2">
+                <span class="text-xs bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded px-2 py-0.5">role.read</span>
+              </span>
+            </div>
+            <div class="grid md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-800">
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Path Param</p>
+                <div class="flex gap-2 text-sm"><code class="text-indigo-300 w-10 shrink-0">:id</code><span class="text-gray-400">Role UUID</span></div>
+              </div>
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Response <span class="text-emerald-400">200</span></p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-emerald-300 font-mono">[
+  {
+    "id": "uuid",
+    "key": "user.read",
+    "description": "View user data",
+    "module": "User"
+  }
+]</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Assign Role to User -->
+          <div id="role-assign-user" class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="flex flex-wrap items-center gap-3 px-6 py-4 border-b border-gray-800">
+              <span class="method-post text-xs font-bold px-2.5 py-1 rounded-md font-mono">POST</span>
+              <code class="text-gray-100 font-mono text-sm">/api/rbac/roles/assign-to-user</code>
+              <span class="ml-auto flex gap-2">
+                <span class="text-xs bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded px-2 py-0.5">role.write</span>
+              </span>
+            </div>
+            <div class="grid md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-800">
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Request Body</p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-green-300 font-mono">{
+  "userId": "&lt;user-uuid&gt;",
+  "roleId": "&lt;role-uuid&gt;"
+}</pre>
+              </div>
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Response <span class="text-emerald-400">201</span></p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-emerald-300 font-mono">{
+  "userId": "uuid",
+  "roleId": "uuid",
+  "createdAt": "2026-03-13T..."
+}</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Remove Role from User -->
+          <div id="role-remove-user" class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="flex flex-wrap items-center gap-3 px-6 py-4 border-b border-gray-800">
+              <span class="method-delete text-xs font-bold px-2.5 py-1 rounded-md font-mono">DELETE</span>
+              <code class="text-gray-100 font-mono text-sm">/api/rbac/roles/user/:userId/role/:roleId</code>
+              <span class="ml-auto flex gap-2">
+                <span class="text-xs bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded px-2 py-0.5">role.write</span>
+              </span>
+            </div>
+            <div class="grid md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-800">
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Path Params</p>
+                <div class="space-y-2 text-sm">
+                  <div class="flex gap-2"><code class="text-indigo-300 w-20 shrink-0">:userId</code><span class="text-gray-400">User UUID</span></div>
+                  <div class="flex gap-2"><code class="text-indigo-300 w-20 shrink-0">:roleId</code><span class="text-gray-400">Role UUID to remove</span></div>
+                </div>
+              </div>
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Response <span class="text-emerald-400">200</span></p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-emerald-300 font-mono">{
+  "userId": "uuid",
+  "roleId": "uuid"
+}</pre>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ════════════════════════════════════════
+           PERMISSIONS
+      ════════════════════════════════════════ -->
+      <section>
+        <div class="flex items-center gap-3 mb-8">
+          <div class="w-8 h-8 rounded-lg bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-lg">🔐</div>
+          <h2 class="text-2xl font-bold text-white">Permissions</h2>
+          <span class="text-sm text-gray-500">Base: <code class="text-indigo-400">/api/rbac/permissions</code></span>
+        </div>
+        <div class="space-y-6">
+
+          <!-- Create Permission -->
+          <div id="perm-create" class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="flex flex-wrap items-center gap-3 px-6 py-4 border-b border-gray-800">
+              <span class="method-post text-xs font-bold px-2.5 py-1 rounded-md font-mono">POST</span>
+              <code class="text-gray-100 font-mono text-sm">/api/rbac/permissions</code>
+              <span class="ml-auto flex gap-2">
+                <span class="text-xs bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded px-2 py-0.5">permission.write</span>
+              </span>
+            </div>
+            <div class="grid md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-800">
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Request Body</p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-green-300 font-mono">{
+  "key": "report.read",
+  "description": "View reports",
+  "module": "Report"
+}</pre>
+                <div class="mt-4 space-y-2 text-sm">
+                  <div class="flex gap-2"><code class="text-indigo-300 w-28 shrink-0">key</code><span class="text-gray-400">string · required · min 3 · unique</span></div>
+                  <div class="flex gap-2"><code class="text-indigo-300 w-28 shrink-0">description</code><span class="text-gray-400">string · optional</span></div>
+                  <div class="flex gap-2"><code class="text-indigo-300 w-28 shrink-0">module</code><span class="text-gray-400">string · optional (e.g. "User", "Team")</span></div>
+                </div>
+              </div>
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Response <span class="text-emerald-400">201</span></p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-emerald-300 font-mono">{
+  "id": "uuid",
+  "key": "report.read",
+  "description": "View reports",
+  "module": "Report",
+  "createdAt": "2026-03-13T..."
+}</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- List Permissions -->
+          <div id="perm-list" class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="flex flex-wrap items-center gap-3 px-6 py-4 border-b border-gray-800">
+              <span class="method-get text-xs font-bold px-2.5 py-1 rounded-md font-mono">GET</span>
+              <code class="text-gray-100 font-mono text-sm">/api/rbac/permissions</code>
+              <span class="ml-auto flex gap-2">
+                <span class="text-xs bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded px-2 py-0.5">permission.read</span>
+              </span>
+            </div>
+            <div class="grid md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-800">
+              <div class="px-6 py-5 flex items-center">
+                <p class="text-sm text-gray-400">No request body. Returns all permissions.</p>
+              </div>
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Response <span class="text-emerald-400">200</span></p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-emerald-300 font-mono">[
+  {
+    "id": "uuid",
+    "key": "user.read",
+    "description": "View user data",
+    "module": "User"
+  }
+]</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Get Permission -->
+          <div id="perm-get" class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="flex flex-wrap items-center gap-3 px-6 py-4 border-b border-gray-800">
+              <span class="method-get text-xs font-bold px-2.5 py-1 rounded-md font-mono">GET</span>
+              <code class="text-gray-100 font-mono text-sm">/api/rbac/permissions/:id</code>
+              <span class="ml-auto flex gap-2">
+                <span class="text-xs bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded px-2 py-0.5">permission.read</span>
+              </span>
+            </div>
+            <div class="grid md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-800">
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Path Param</p>
+                <div class="flex gap-2 text-sm"><code class="text-indigo-300 w-10 shrink-0">:id</code><span class="text-gray-400">UUID of the permission</span></div>
+              </div>
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Response <span class="text-emerald-400">200</span></p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-emerald-300 font-mono">{
+  "id": "uuid",
+  "key": "user.read",
+  "description": "View user data",
+  "module": "User"
+}</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Update Permission -->
+          <div id="perm-update" class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="flex flex-wrap items-center gap-3 px-6 py-4 border-b border-gray-800">
+              <span class="method-put text-xs font-bold px-2.5 py-1 rounded-md font-mono">PUT</span>
+              <code class="text-gray-100 font-mono text-sm">/api/rbac/permissions/:id</code>
+              <span class="ml-auto flex gap-2">
+                <span class="text-xs bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded px-2 py-0.5">permission.write</span>
+              </span>
+            </div>
+            <div class="grid md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-800">
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Request Body (all optional)</p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-green-300 font-mono">{
+  "key": "report.export",
+  "description": "Export reports",
+  "module": "Report"
+}</pre>
+              </div>
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Response <span class="text-emerald-400">200</span></p>
+                <pre class="bg-gray-950 rounded-xl p-4 text-sm text-emerald-300 font-mono">{
+  "id": "uuid",
+  "key": "report.export",
+  "description": "Export reports",
+  "module": "Report",
+  "updatedAt": "2026-03-13T..."
+}</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Delete Permission -->
+          <div id="perm-delete" class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="flex flex-wrap items-center gap-3 px-6 py-4 border-b border-gray-800">
+              <span class="method-delete text-xs font-bold px-2.5 py-1 rounded-md font-mono">DELETE</span>
+              <code class="text-gray-100 font-mono text-sm">/api/rbac/permissions/:id</code>
+              <span class="ml-auto flex gap-2">
+                <span class="text-xs bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 rounded px-2 py-0.5">permission.delete</span>
+              </span>
+            </div>
+            <div class="grid md:grid-cols-2 gap-0 divide-y md:divide-y-0 md:divide-x divide-gray-800">
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Path Param</p>
+                <div class="flex gap-2 text-sm"><code class="text-indigo-300 w-10 shrink-0">:id</code><span class="text-gray-400">UUID of the permission to delete</span></div>
+              </div>
+              <div class="px-6 py-5">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Response <span class="text-emerald-400">204</span></p>
+                <p class="text-sm text-gray-400">No content returned on success.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ════════════════════════════════════════
+           ALL SEEDED PERMISSIONS
+      ════════════════════════════════════════ -->
+      <section id="all-permissions">
+        <div class="flex items-center gap-3 mb-8">
+          <div class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-lg">📋</div>
+          <h2 class="text-2xl font-bold text-white">All Seeded Permissions</h2>
+        </div>
+        <p class="text-gray-400 mb-6">These 45 permissions are created by the super-admin seed and assigned to the <code class="text-indigo-400">superadmin</code> role.</p>
+
+        <div class="grid gap-4">
+          <!-- User -->
+          <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="px-6 py-3 bg-blue-500/10 border-b border-gray-800">
+              <span class="text-sm font-semibold text-blue-300">User</span>
+            </div>
+            <div class="divide-y divide-gray-800">
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">user.read</code><span class="text-gray-400">View user data</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">user.create</code><span class="text-gray-400">Create users</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">user.write</code><span class="text-gray-400">Write users</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">user.update</code><span class="text-gray-400">Update user data</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">user.delete</code><span class="text-gray-400">Delete users</span></div>
+            </div>
+          </div>
+          <!-- Role -->
+          <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="px-6 py-3 bg-amber-500/10 border-b border-gray-800">
+              <span class="text-sm font-semibold text-amber-300">Role</span>
+            </div>
+            <div class="divide-y divide-gray-800">
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">role.read</code><span class="text-gray-400">View roles</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">role.create</code><span class="text-gray-400">Create roles</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">role.write</code><span class="text-gray-400">Write roles</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">role.update</code><span class="text-gray-400">Update roles</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">role.delete</code><span class="text-gray-400">Delete roles</span></div>
+            </div>
+          </div>
+          <!-- Permission -->
+          <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="px-6 py-3 bg-rose-500/10 border-b border-gray-800">
+              <span class="text-sm font-semibold text-rose-300">Permission</span>
+            </div>
+            <div class="divide-y divide-gray-800">
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">permission.read</code><span class="text-gray-400">View permissions</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">permission.assign</code><span class="text-gray-400">Assign permissions to roles</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">permission.write</code><span class="text-gray-400">Write permissions</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">permission.delete</code><span class="text-gray-400">Delete permissions</span></div>
+            </div>
+          </div>
+          <!-- Team -->
+          <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="px-6 py-3 bg-violet-500/10 border-b border-gray-800">
+              <span class="text-sm font-semibold text-violet-300">Team</span>
+            </div>
+            <div class="divide-y divide-gray-800">
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">team.read</code><span class="text-gray-400">View teams</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">team.create</code><span class="text-gray-400">Create teams</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">team.update</code><span class="text-gray-400">Update teams</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">team.delete</code><span class="text-gray-400">Delete teams</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">team.write</code><span class="text-gray-400">Write teams (approve assignments/removals)</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">team.assignLead</code><span class="text-gray-400">Assign team lead</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">team.request</code><span class="text-gray-400">Create team membership requests</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">team.approve</code><span class="text-gray-400">Approve team requests</span></div>
+            </div>
+          </div>
+          <!-- System / AuditLog -->
+          <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="px-6 py-3 bg-gray-700/40 border-b border-gray-800">
+              <span class="text-sm font-semibold text-gray-300">System / AuditLog</span>
+            </div>
+            <div class="divide-y divide-gray-800">
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">auditlog.read</code><span class="text-gray-400">View audit logs</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">system.config</code><span class="text-gray-400">Access system configuration</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">admin.view</code><span class="text-gray-400">Access to the Admin Dashboard</span></div>
+            </div>
+          </div>
+          <!-- Attendance / Location / Device / Consent -->
+          <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="px-6 py-3 bg-teal-500/10 border-b border-gray-800">
+              <span class="text-sm font-semibold text-teal-300">HR — Attendance · Location · Device · Consent</span>
+            </div>
+            <div class="divide-y divide-gray-800">
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-44 shrink-0">attendance.self</code><span class="text-gray-400">Perform own attendance check-in</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-44 shrink-0">attendance.read</code><span class="text-gray-400">Read attendance records</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-44 shrink-0">location.request</code><span class="text-gray-400">Create on-demand location requests</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-44 shrink-0">location.read</code><span class="text-gray-400">Read location request results</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-44 shrink-0">location.audit</code><span class="text-gray-400">View location access audit records</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-44 shrink-0">device.register</code><span class="text-gray-400">Register/update a device (push token)</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-44 shrink-0">device.unregister</code><span class="text-gray-400">Unregister device / remove push token</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-44 shrink-0">device.read</code><span class="text-gray-400">List devices for a user</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-44 shrink-0">consent.write</code><span class="text-gray-400">Create or revoke consent entries</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-44 shrink-0">consent.read</code><span class="text-gray-400">Read consents for a user</span></div>
+            </div>
+          </div>
+          <!-- Leads -->
+          <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="px-6 py-3 bg-orange-500/10 border-b border-gray-800">
+              <span class="text-sm font-semibold text-orange-300">Lead</span>
+            </div>
+            <div class="divide-y divide-gray-800">
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">lead.read</code><span class="text-gray-400">Read leads</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">lead.write</code><span class="text-gray-400">Create/update leads</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">lead.assign</code><span class="text-gray-400">Assign leads</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">lead.note</code><span class="text-gray-400">Add notes to leads</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">lead.followup</code><span class="text-gray-400">Manage lead follow-ups</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-40 shrink-0">lead.webhook</code><span class="text-gray-400">View raw webhook events</span></div>
+            </div>
+          </div>
+          <!-- Inventory -->
+          <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div class="px-6 py-3 bg-cyan-500/10 border-b border-gray-800">
+              <span class="text-sm font-semibold text-cyan-300">Inventory</span>
+            </div>
+            <div class="divide-y divide-gray-800">
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-44 shrink-0">inventory.read</code><span class="text-gray-400">Read inventory data</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-44 shrink-0">inventory.write</code><span class="text-gray-400">Create/update inventory</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-44 shrink-0">inventory.delete</code><span class="text-gray-400">Delete inventory entities</span></div>
+              <div class="flex gap-4 px-6 py-3 text-sm"><code class="text-indigo-300 w-44 shrink-0">inventory.manage</code><span class="text-gray-400">Manage advanced inventory states (BLOCK, SOLD, BOOKING…)</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Error Codes -->
+      <section class="pb-16">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-8 h-8 rounded-lg bg-red-500/20 border border-red-500/40 flex items-center justify-center text-lg">⚠️</div>
+          <h2 class="text-2xl font-bold text-white">Common Error Responses</h2>
+        </div>
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+          <div class="divide-y divide-gray-800">
+            <div class="flex gap-6 px-6 py-4 text-sm items-center">
+              <span class="w-14 text-red-400 font-bold font-mono shrink-0">400</span>
+              <span class="text-gray-300">Bad Request — Validation failed (ZodError) or invalid input</span>
+              <code class="ml-auto text-xs text-gray-500 font-mono shrink-0">&#123; "error": &#123;...&#125; &#125;</code>
+            </div>
+            <div class="flex gap-6 px-6 py-4 text-sm items-center">
+              <span class="w-14 text-amber-400 font-bold font-mono shrink-0">401</span>
+              <span class="text-gray-300">Unauthorized — Missing or invalid JWT access token</span>
+              <code class="ml-auto text-xs text-gray-500 font-mono shrink-0">&#123; "error": "Unauthorized" &#125;</code>
+            </div>
+            <div class="flex gap-6 px-6 py-4 text-sm items-center">
+              <span class="w-14 text-orange-400 font-bold font-mono shrink-0">403</span>
+              <span class="text-gray-300">Forbidden — Authenticated but missing required permission</span>
+              <code class="ml-auto text-xs text-gray-500 font-mono shrink-0">&#123; "error": "Forbidden" &#125;</code>
+            </div>
+            <div class="flex gap-6 px-6 py-4 text-sm items-center">
+              <span class="w-14 text-gray-400 font-bold font-mono shrink-0">404</span>
+              <span class="text-gray-300">Not Found — Resource does not exist</span>
+              <code class="ml-auto text-xs text-gray-500 font-mono shrink-0">&#123; "error": "Not found" &#125;</code>
+            </div>
+            <div class="flex gap-6 px-6 py-4 text-sm items-center">
+              <span class="w-14 text-rose-400 font-bold font-mono shrink-0">500</span>
+              <span class="text-gray-300">Internal Server Error — Unexpected server failure</span>
+              <code class="ml-auto text-xs text-gray-500 font-mono shrink-0">&#123; "error": "Internal server error" &#125;</code>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Back to top -->
+  <a href="#" class="fixed bottom-6 right-6 w-10 h-10 bg-indigo-600 hover:bg-indigo-500 rounded-full flex items-center justify-center shadow-lg transition text-white text-lg">↑</a>
+
+</body>
+</html>

@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRM API — Lead Management Reference</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { DEFAULT: '#6366f1', dark: '#4f46e5', light: '#a5b4fc' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    html { scroll-behavior: smooth; }
+    pre { white-space: pre-wrap; word-break: break-all; }
+    .badge-get    { background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; }
+    .badge-post   { background:#dbeafe; color:#1e40af; border:1px solid #93c5fd; }
+    .badge-put    { background:#fef3c7; color:#92400e; border:1px solid #fcd34d; }
+    .badge-patch  { background:#ede9fe; color:#5b21b6; border:1px solid #c4b5fd; }
+    .badge-delete { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
+  </style>
+</head>
+<body class="bg-gray-950 text-gray-200 font-sans antialiased">
+
+  <!-- ─── Sidebar ─────────────────────────────────────────────────── -->
+  <aside class="fixed top-0 left-0 h-full w-64 bg-gray-900 border-r border-gray-800 overflow-y-auto z-30 hidden lg:flex flex-col">
+    <div class="px-6 py-5 border-b border-gray-800">
+      <span class="text-xs font-semibold tracking-widest text-indigo-400 uppercase">CRM Backend</span>
+      <h1 class="text-lg font-bold text-white mt-1">Lead Management API</h1>
+    </div>
+    <nav class="flex-1 px-4 py-4 space-y-1 text-sm">
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-2 pb-1">Overview</p>
+      <a href="#overview"       class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Lead Lifecycle</a>
+      <a href="#permissions"    class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Permissions</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Intake</p>
+      <a href="#intake-webhook" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Webhook Intake</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Assignment</p>
+      <a href="#assign-manual"  class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Manual Assign</a>
+      <a href="#assign-escalated-list"  class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">List Escalated Leads</a>
+      <a href="#assign-escalated-assign" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Assign Escalated Lead</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Follow-ups &amp; Status</p>
+      <a href="#followup-create"   class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Create Follow-up</a>
+      <a href="#followup-list"     class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">List Follow-ups</a>
+      <a href="#status-update"     class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Update Status / Stage</a>
+      <a href="#stage-history"     class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Stage History</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Admin Analytics</p>
+      <a href="#admin-followups"   class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Admin Follow-ups</a>
+      <a href="#admin-funnel"      class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Stage Funnel</a>
+      <a href="#admin-ratings"     class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Ratings Analytics</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Reference</p>
+      <a href="#enums"    class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Enums &amp; Statuses</a>
+      <a href="#summary"  class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">All Endpoints Summary</a>
+    </nav>
+    <div class="px-6 py-4 border-t border-gray-800 text-xs text-gray-500">
+      Base URL: <span class="text-indigo-400 font-mono">/api</span>
+    </div>
+  </aside>
+
+  <!-- ─── Main ──────────────────────────────────────────────────────── -->
+  <main class="lg:ml-64 min-h-screen">
+
+    <!-- Hero -->
+    <div class="bg-gradient-to-br from-gray-900 via-sky-950 to-gray-900 border-b border-gray-800 px-6 md:px-12 py-12">
+      <div class="max-w-4xl">
+        <span class="inline-block text-xs font-semibold tracking-widest text-sky-400 uppercase mb-3">CRM Backend · Leads</span>
+        <h1 class="text-3xl md:text-4xl font-extrabold text-white mb-4">Lead Management API</h1>
+        <p class="text-gray-400 text-base md:text-lg leading-relaxed mb-6">
+          Complete reference for all Lead endpoints — intake via webhooks, automatic &amp; manual assignment,
+          escalations, follow-ups, status, stage history, and analytics (funnel &amp; ratings).
+        </p>
+        <div class="flex flex-wrap gap-3 text-sm">
+          <span class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-gray-300">
+            Base&nbsp;<span class="text-indigo-400 font-mono font-semibold">/api/leads</span>
+          </span>
+          <span class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-gray-300">
+            Auth&nbsp;<span class="text-amber-400 font-mono">Bearer &lt;token&gt;</span>
+          </span>
+          <span class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-gray-300">
+            Webhooks · Assignment · Follow-ups · Analytics
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="px-6 md:px-12 py-10 max-w-5xl space-y-20">
+
+      <!-- ══════════════════════════════════════════
+           OVERVIEW
+      ══════════════════════════════════════════ -->
+      <section id="overview">
+        <h2 class="text-2xl font-bold text-white mb-6">Lead Lifecycle Overview</h2>
+
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
+          <h3 class="text-white font-semibold mb-3">High-level Flow</h3>
+          <pre class="text-sm text-gray-300 leading-relaxed">
+1) Intake
+   • External portals / forms call <strong>/api/leads/webhook</strong>.
+   • Payload is normalized into a Lead and WebhookEvent.
+   • A pending LeadAssignment is created and queued.
+
+2) Automatic Assignment
+   • Background workers pick up the assignment job.
+   • Strategy: round-robin + capacity limits + source pools (team-based).
+   • Lead is assigned to an agent; their capacity is reserved.
+
+3) Manual Overrides & Escalation
+   • Managers can manually re-assign a lead at any time.
+   • When attempts/timeouts exceed thresholds, the lead is escalated.
+   • Escalated leads are visible in `/assignment/admin/escalated`.
+
+4) Follow-ups & Status
+   • Agents add follow-ups with due dates, notes, dispositions, ratings.
+   • Status updates (e.g. WON / LOST / UNQUALIFIED) create audit follow-ups.
+   • Capacity is released when a lead reaches a terminal status.
+
+5) Analytics
+   • Admins can inspect all follow-ups, funnel by stage, and rating summaries.
+          </pre>
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════
+           PERMISSIONS
+      ══════════════════════════════════════════ -->
+      <section id="permissions">
+        <h2 class="text-2xl font-bold text-white mb-6">Permissions</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+          <table class="text-sm w-full">
+            <thead>
+              <tr class="text-gray-400 border-b border-gray-700 bg-gray-950">
+                <th class="text-left px-6 py-3">Permission</th>
+                <th class="text-left px-6 py-3">Scope</th>
+                <th class="text-left px-6 py-3">Used By</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800">
+              <tr class="hover:bg-gray-800/50">
+                <td class="px-6 py-3 font-mono text-sky-300">lead.read</td>
+                <td class="px-6 py-3 text-gray-300">Read lead data, follow-ups, stage history, analytics</td>
+                <td class="px-6 py-3 text-gray-300">Agents, team leads, managers</td>
+              </tr>
+              <tr class="hover:bg-gray-800/50">
+                <td class="px-6 py-3 font-mono text-sky-300">lead.write</td>
+                <td class="px-6 py-3 text-gray-300">Create follow-ups, update status/stage/priority</td>
+                <td class="px-6 py-3 text-gray-300">Agents, team leads</td>
+              </tr>
+              <tr class="hover:bg-gray-800/50">
+                <td class="px-6 py-3 font-mono text-sky-300">lead.assign</td>
+                <td class="px-6 py-3 text-gray-300">Manual (re)assignment of leads</td>
+                <td class="px-6 py-3 text-gray-300">Managers / supervisors</td>
+              </tr>
+              <tr class="hover:bg-gray-800/50">
+                <td class="px-6 py-3 font-mono text-sky-300">lead.escalation</td>
+                <td class="px-6 py-3 text-gray-300">View escalated leads queue</td>
+                <td class="px-6 py-3 text-gray-300">Managers / supervisors</td>
+              </tr>
+              <tr class="hover:bg-gray-800/50">
+                <td class="px-6 py-3 font-mono text-sky-300">lead.read (admin)</td>
+                <td class="px-6 py-3 text-gray-300">Admin follow-up list, funnel, ratings</td>
+                <td class="px-6 py-3 text-gray-300">Super admin / reporting roles</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════
+           INTAKE WEBHOOK
+      ══════════════════════════════════════════ -->
+      <section>
+        <h2 class="text-2xl font-bold text-white mb-1">Lead Intake (Webhook)</h2>
+        <p class="text-gray-400 text-sm mb-8">Base path: <code class="text-indigo-400 font-mono">/api/leads/webhook</code></p>
+
+        <div id="intake-webhook" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/leads/webhook</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">HMAC only (no JWT)</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">
+              Receives raw lead payloads from external portals (99acres, MagicBricks, website forms, etc.).
+              This endpoint is <strong class="text-white">not authenticated with JWT</strong> — it is protected by an HMAC signature middleware instead.
+            </p>
+
+            <div class="bg-sky-950/40 border border-sky-900 rounded-lg p-4 text-sm text-sky-100">
+              <p class="font-semibold mb-1">Security</p>
+              <ul class="list-disc list-inside space-y-1">
+                <li>External system sends <code class="text-sky-300">X-Hub-Signature</code> / HMAC header (implementation-specific).</li>
+                <li>Backend verifies the signature over the raw body using a shared secret.</li>
+                <li>Requests failing verification are rejected before reaching business logic.</li>
+              </ul>
+            </div>
+
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Headers</p>
+              <table class="text-sm w-full">
+                <thead>
+                  <tr class="text-gray-500 border-b border-gray-700">
+                    <th class="text-left py-1 pr-4">Header</th>
+                    <th class="text-left py-1 pr-4">Required</th>
+                    <th class="text-left py-1">Description</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                  <tr>
+                    <td class="py-2 pr-4 font-mono text-indigo-300">x-lead-source / x-source</td>
+                    <td class="py-2 pr-4 text-gray-300">Recommended</td>
+                    <td class="py-2 text-gray-300">Provider identifier (e.g. <code>magicbricks</code>, <code>99acres</code>, <code>website</code>).</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 pr-4 font-mono text-indigo-300">x-idempotency-key</td>
+                    <td class="py-2 pr-4 text-gray-300">Optional</td>
+                    <td class="py-2 text-gray-300">Unique key to dedupe retry attempts for the same event.</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 pr-4 font-mono text-indigo-300">HMAC header(s)</td>
+                    <td class="py-2 pr-4 text-gray-300">Required</td>
+                    <td class="py-2 text-gray-300">Provider-specific header(s) for signature verification.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <p class="text-gray-300 text-sm mb-2">
+                Accepts arbitrary JSON (or text) body. Under the hood, it is normalized into a lead shape:
+              </p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "provider": "magicbricks",
+  "externalId": "MB-1234567890",
+  "name": "Ravi Kumar",
+  "email": "ravi@example.com",
+  "phone": "+919876543210",
+  "source": "magicbricks",
+  "payload": {
+    /* full raw provider payload */
+  }
+}</pre>
+            </div>
+
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Responses</p>
+              <p class="text-gray-300 text-sm mb-2">Depending on dedupe outcome and existing lead state:</p>
+
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">New lead created · 201</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "note": "created",
+  "leadId": "cllead1...",
+  "webhookEventId": "clwh1..."
+}</pre>
+
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-4 mb-1">Existing lead linked · 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "note": "linked",
+  "leadId": "clleadExisting...",
+  "webhookEventId": "clwh2..."
+}</pre>
+
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-4 mb-1">In-flight / Duplicate · 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "note": "processing in-flight",
+  "eventId": "clwh3..."
+}</pre>
+            </div>
+
+            <div class="bg-gray-900 border border-gray-800 rounded-lg p-4 text-sm text-gray-300">
+              <p class="font-semibold text-gray-100 mb-2">Business Rules</p>
+              <ul class="list-disc list-inside space-y-1">
+                <li>Deduplication uses a hash of <code>phone</code>, <code>email</code>, <code>source</code>, <code>externalId</code>.</li>
+                <li>A Redis guard ensures each dedupe key is processed once at a time.</li>
+                <li>Existing leads are looked up by <code>externalId</code> first, then by dedupe hash.</li>
+                <li>Every webhook creates a <code>LeadWebhookEvent</code> row for full auditability.</li>
+                <li>When a new lead is created, an initial <code>LeadAssignment</code> is inserted and queued for automatic assignment.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════
+           ASSIGNMENT
+      ══════════════════════════════════════════ -->
+      <section>
+        <h2 class="text-2xl font-bold text-white mb-1">Manual Assignment &amp; Escalation</h2>
+        <p class="text-gray-400 text-sm mb-8">Base path: <code class="text-indigo-400 font-mono">/api/leads/assignment</code></p>
+
+        <!-- Manual Assign -->
+        <div id="assign-manual" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/leads/assignment/:id</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">lead.assign</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">
+              Manually assigns a lead to a specific user. Can be used to override automatic routing,
+              handle escalations, or reassign leads between agents.
+            </p>
+
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Path Parameters</p>
+              <table class="text-sm w-full">
+                <tbody>
+                  <tr class="divide-x divide-gray-800">
+                    <td class="py-2 pr-4 font-mono text-indigo-300">id</td>
+                    <td class="py-2 text-gray-300">Lead ID (required)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "userId": "clusr123..."   // required — user to assign this lead to
+}</pre>
+            </div>
+
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true
+}</pre>
+            </div>
+
+            <div class="bg-gray-900 border border-gray-800 rounded-lg p-4 text-sm text-gray-300">
+              <p class="font-semibold text-gray-100 mb-2">Business Rules</p>
+              <ul class="list-disc list-inside space-y-1">
+                <li>Cancels any pending auto-assignment jobs tied to this lead (via Bull queues).</li>
+                <li>Updates <code>Lead.assignedToId</code>, <code>assignedAt</code>, and clears <code>assignedTeamId</code>.</li>
+                <li>If a previous <code>LeadAssignment</code> exists, it is updated with method <code>"manual"</code>, <code>assignedBy</code>, and <code>manualAssignedAt</code>.</li>
+                <li>If no assignment history exists, a new <code>LeadAssignment</code> record is created.</li>
+                <li>Capacity is adjusted:
+                  <ul class="list-disc list-inside ml-5">
+                    <li>New assignee’s <code>UserCapacity.used</code> is incremented.</li>
+                    <li>Previous assignee’s <code>used</code> is decremented (down to a minimum of 0).</li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Escalated list -->
+        <div id="assign-escalated-list" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/leads/assignment/admin/escalated</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">lead.escalation</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">
+              Lists escalated leads — leads which failed automatic assignment or exceeded follow-up thresholds
+              and now require manual intervention by a manager.
+            </p>
+
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Query Parameters</p>
+              <table class="text-sm w-full">
+                <thead>
+                  <tr class="text-gray-500 border-b border-gray-700">
+                    <th class="text-left py-1 pr-4">Param</th>
+                    <th class="text-left py-1 pr-4">Type</th>
+                    <th class="text-left py-1">Description</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                  <tr>
+                    <td class="py-2 pr-4 font-mono text-indigo-300">page</td>
+                    <td class="py-2 pr-4 text-gray-400">number</td>
+                    <td class="py-2 text-gray-300">Page number (default 1)</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 pr-4 font-mono text-indigo-300">limit</td>
+                    <td class="py-2 pr-4 text-gray-400">number</td>
+                    <td class="py-2 text-gray-300">Items per page (default 50, max 100)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "data": [
+    {
+      "id": "clleadEscalated1...",
+      "name": "Ravi Kumar",
+      "phone": "+919876543210",
+      "email": "ravi@example.com",
+      "status": "UNASSIGNED_ESCALATED",
+      "createdAt": "2025-06-01T09:00:00.000Z",
+      "assignedTeamId": "clteam1..."  // may be null
+    }
+  ],
+  "meta": { "page": 1, "limit": 50, "total": 3 }
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Assign escalated -->
+        <div id="assign-escalated-assign" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/leads/assignment/admin/escalated/:id/assign</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">lead.assign</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">
+              Manually assigns an escalated lead to a specific agent. Internally, this delegates to the same
+              manual assignment service used by <code>/api/leads/assignment/:id</code>.
+            </p>
+
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Path &amp; Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">// Path
+POST /api/leads/assignment/admin/escalated/:id/assign
+
+// Body
+{
+  "userId": "clusr123..."  // required — user to assign this escalated lead to
+}</pre>
+            </div>
+
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true
+}</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════
+           FOLLOW-UPS & STATUS
+      ══════════════════════════════════════════ -->
+      <section>
+        <h2 class="text-2xl font-bold text-white mb-1">Follow-ups &amp; Lead Status</h2>
+        <p class="text-gray-400 text-sm mb-8">Base path: <code class="text-indigo-400 font-mono">/api/leads/followup</code></p>
+
+        <!-- Create follow-up -->
+        <div id="followup-create" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/leads/followup/:id/followups</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">lead.write</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">
+              Creates a follow-up entry for a lead — typically a call, visit, or note scheduled by an agent.
+            </p>
+
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "assignedTo": "clusr123...",              // optional — user responsible for this follow-up
+  "dueAt": "2025-06-02T10:00:00.000Z",      // optional — ISO date
+  "note": "Call the client after site visit", // optional, max 2000 chars
+  "disposition": "Interested, needs approval", // optional, max 500 chars
+  "rating": 4,                              // optional, integer 0–5
+  "status": "pending"                       // optional, "pending" | "done" | "skipped"
+}</pre>
+            </div>
+
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "data": {
+    "id": "clfup1...",
+    "leadId": "cllead1...",
+    "assignedTo": "clusr123...",
+    "dueAt": "2025-06-02T10:00:00.000Z",
+    "note": "Call the client after site visit",
+    "disposition": "Interested, needs approval",
+    "rating": 4,
+    "status": "pending",
+    "createdAt": "2025-06-01T12:00:00.000Z"
+  }
+}</pre>
+            </div>
+
+            <div class="bg-gray-900 border border-gray-800 rounded-lg p-4 text-sm text-gray-300">
+              <p class="font-semibold text-gray-100 mb-2">Notifications</p>
+              <ul class="list-disc list-inside space-y-1">
+                <li>If <code>assignedTo</code> is set, a socket event <code>followup.created</code> and a push notification <code>FOLLOWUP_CREATED</code> are sent to that user.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- List follow-ups -->
+        <div id="followup-list" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/leads/followup/:id/followups</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">lead.read</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">
+              Lists follow-up entries for a single lead, most recent first, with pagination.
+            </p>
+
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Query Parameters</p>
+              <table class="text-sm w-full">
+                <thead>
+                  <tr class="text-gray-500 border-b border-gray-700">
+                    <th class="text-left py-1 pr-4">Param</th>
+                    <th class="text-left py-1 pr-4">Type</th>
+                    <th class="text-left py-1">Description</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                  <tr>
+                    <td class="py-2 pr-4 font-mono text-indigo-300">page</td>
+                    <td class="py-2 pr-4 text-gray-400">number</td>
+                    <td class="py-2 text-gray-300">Page number (default 1)</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 pr-4 font-mono text-indigo-300">limit</td>
+                    <td class="py-2 pr-4 text-gray-400">number</td>
+                    <td class="py-2 text-gray-300">Items per page (default 50, max 200)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "items": [ /* LeadFollowUp[] ordered by createdAt desc */ ],
+  "meta": { "page": 1, "limit": 50, "total": 12 }
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Update status -->
+        <div id="status-update" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-patch text-xs font-bold px-3 py-1 rounded-full font-mono">PATCH</span>
+            <code class="text-white font-mono text-sm">/api/leads/followup/:id/status</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">lead.write</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">
+              Updates the status, stage, and/or priority of a lead. Also creates a follow-up note capturing
+              the reason, rating, and previous values, and optionally records stage history.
+            </p>
+
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "status": "WON",                       // required — LeadStatus enum
+  "stage": "CLOSURE",                    // optional — LeadStage enum
+  "priority": "HOT",                     // optional — LeadPriority enum
+  "disposition": "Booked a 3BHK unit",   // optional — max 500 chars
+  "note": "Deal closed after 2nd visit", // optional — max 2000 chars
+  "rating": 5                            // optional — integer 0–5
+}</pre>
+            </div>
+
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "data": {
+    "lead": { /* updated Lead object */ },
+    "followUp": {
+      /* follow-up record describing this status change, including meta.previousStatus/stage/priority */
+    }
+  }
+}</pre>
+            </div>
+
+            <div class="bg-gray-900 border border-gray-800 rounded-lg p-4 text-sm text-gray-300">
+              <p class="font-semibold text-gray-100 mb-2">Business Rules</p>
+              <ul class="list-disc list-inside space-y-1">
+                <li>A distributed lock is used to prevent concurrent status updates for the same lead.</li>
+                <li>When moving into a terminal status (<code>WON</code>, <code>LOST</code>, <code>UNQUALIFIED</code>) from a non-terminal state:
+                  <ul class="list-disc list-inside ml-5">
+                    <li>The assignee’s <code>UserCapacity.used</code> is decremented (down to 0), freeing up capacity.</li>
+                  </ul>
+                </li>
+                <li>Changes to <code>stage</code> are recorded into <code>LeadStageHistory</code> with <code>fromStage</code>, <code>toStage</code>, <code>changedBy</code>, and note.</li>
+                <li>Notifications are emitted to the current assignee:
+                  <ul class="list-disc list-inside ml-5">
+                    <li>Socket event <code>lead.status.changed</code></li>
+                    <li>Push notification <code>LEAD_STATUS_CHANGED</code></li>
+                  </ul>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stage history -->
+        <div id="stage-history" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/leads/followup/:id/stage-history</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">lead.read</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">
+              Returns the full stage-change history for a given lead, ordered from oldest to newest.
+            </p>
+
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "items": [
+    {
+      "id": "clhist1...",
+      "leadId": "cllead1...",
+      "fromStage": "NEW",
+      "toStage": "CONTACTED",
+      "changedBy": "clusr123...",
+      "note": "Spoke to client, scheduled site visit",
+      "createdAt": "2025-06-01T10:00:00.000Z"
+    },
+    {
+      "id": "clhist2...",
+      "fromStage": "CONTACTED",
+      "toStage": "CLOSURE",
+      "changedBy": "clusr123...",
+      "note": "Shortlisted project, awaiting token",
+      "createdAt": "2025-06-03T09:00:00.000Z"
+    }
+  ]
+}</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════
+           ADMIN ANALYTICS
+      ══════════════════════════════════════════ -->
+      <section>
+        <h2 class="text-2xl font-bold text-white mb-1">Admin Follow-ups &amp; Analytics</h2>
+        <p class="text-gray-400 text-sm mb-8">Base path: <code class="text-indigo-400 font-mono">/api/leads/followup/admin</code></p>
+
+        <!-- Admin follow-ups -->
+        <div id="admin-followups" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/leads/followup/admin</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">lead.read</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">
+              Admin view of follow-ups across the entire system, with filters and pagination.
+            </p>
+
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Query Parameters</p>
+              <table class="text-sm w-full">
+                <thead>
+                  <tr class="text-gray-500 border-b border-gray-700">
+                    <th class="text-left py-1 pr-4">Param</th>
+                    <th class="text-left py-1 pr-4">Type</th>
+                    <th class="text-left py-1">Description</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                  <tr>
+                    <td class="py-2 pr-4 font-mono text-indigo-300">disposition</td>
+                    <td class="py-2 pr-4 text-gray-400">string</td>
+                    <td class="py-2 text-gray-300">Filter by disposition (exact match or implementation-defined)</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 pr-4 font-mono text-indigo-300">assignedTo</td>
+                    <td class="py-2 pr-4 text-gray-400">string</td>
+                    <td class="py-2 text-gray-300">Filter by assignee user ID</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 pr-4 font-mono text-indigo-300">from</td>
+                    <td class="py-2 pr-4 text-gray-400">ISO string</td>
+                    <td class="py-2 text-gray-300">Only follow-ups with <code>createdAt &gt;= from</code></td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 pr-4 font-mono text-indigo-300">to</td>
+                    <td class="py-2 pr-4 text-gray-400">ISO string</td>
+                    <td class="py-2 text-gray-300">Only follow-ups with <code>createdAt &lt;= to</code></td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 pr-4 font-mono text-indigo-300">page</td>
+                    <td class="py-2 pr-4 text-gray-400">number</td>
+                    <td class="py-2 text-gray-300">Page number (default 1)</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 pr-4 font-mono text-indigo-300">limit</td>
+                    <td class="py-2 pr-4 text-gray-400">number</td>
+                    <td class="py-2 text-gray-300">Items per page (default 100, max 500)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "items": [ /* LeadFollowUp[] matching filters */ ],
+  "meta": { "page": 1, "limit": 100, "total": 245 }
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stage funnel -->
+        <div id="admin-funnel" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/leads/followup/admin/funnel</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">lead.read</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">
+              Returns a funnel breakdown of active leads by stage, optionally scoped to a team or user.
+            </p>
+
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Query Parameters</p>
+              <table class="text-sm w-full">
+                <thead>
+                  <tr class="text-gray-500 border-b border-gray-700">
+                    <th class="text-left py-1 pr-4">Param</th>
+                    <th class="text-left py-1 pr-4">Type</th>
+                    <th class="text-left py-1">Description</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                  <tr>
+                    <td class="py-2 pr-4 font-mono text-indigo-300">teamId</td>
+                    <td class="py-2 pr-4 text-gray-400">string</td>
+                    <td class="py-2 text-gray-300">Optional. Restrict to leads assigned to this team.</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 pr-4 font-mono text-indigo-300">userId</td>
+                    <td class="py-2 pr-4 text-gray-400">string</td>
+                    <td class="py-2 text-gray-300">Optional. Restrict to leads assigned to this user.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "data": [
+    { "stage": "NEW",        "count": 120 },
+    { "stage": "CONTACTED",  "count": 80 },
+    { "stage": "CLOSURE",    "count": 25 },
+    { "stage": "WON",        "count": 10 }
+  ]
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ratings -->
+        <div id="admin-ratings" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/leads/followup/admin/ratings</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">lead.read</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">
+              Returns aggregate ratings for leads, grouped by stage. Useful for measuring quality/conversion
+              perception at different stages of the funnel.
+            </p>
+
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Query Parameters</p>
+              <table class="text-sm w-full">
+                <thead>
+                  <tr class="text-gray-500 border-b border-gray-700">
+                    <th class="text-left py-1 pr-4">Param</th>
+                    <th class="text-left py-1 pr-4">Type</th>
+                    <th class="text-left py-1">Description</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                  <tr>
+                    <td class="py-2 pr-4 font-mono text-indigo-300">groupBy</td>
+                    <td class="py-2 pr-4 text-gray-400">string</td>
+                    <td class="py-2 text-gray-300">
+                      Currently supported: <code>stage</code>. Other values will return an empty array.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "data": [
+    { "stage": "NEW",       "avgRating": 3.4, "cnt": 25 },
+    { "stage": "CONTACTED", "avgRating": 4.1, "cnt": 40 },
+    { "stage": "WON",       "avgRating": 4.8, "cnt": 10 }
+  ]
+}</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════
+           ENUMS
+      ══════════════════════════════════════════ -->
+      <section id="enums">
+        <h2 class="text-2xl font-bold text-white mb-6">Enums &amp; Statuses</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <h3 class="text-white font-semibold mb-3">LeadStatus (examples)</h3>
+            <table class="text-sm w-full">
+              <tbody class="divide-y divide-gray-800">
+                <tr>
+                  <td class="py-2 pr-4 font-mono text-green-400">NEW</td>
+                  <td class="py-2 text-gray-300">Freshly created, no contact made yet</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono text-blue-400">CONTACTED</td>
+                  <td class="py-2 text-gray-300">Agent has spoken or interacted with lead</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono text-amber-400">IN_PROGRESS</td>
+                  <td class="py-2 text-gray-300">Active follow-ups, not yet decided</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono text-emerald-400">WON</td>
+                  <td class="py-2 text-gray-300">Converted / booked — terminal (capacity released)</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono text-red-400">LOST</td>
+                  <td class="py-2 text-gray-300">Lost / not proceeding — terminal (capacity released)</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono text-gray-400">UNQUALIFIED</td>
+                  <td class="py-2 text-gray-300">Not a fit / spam — terminal (capacity released)</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono text-pink-400">UNASSIGNED_ESCALATED</td>
+                  <td class="py-2 text-gray-300">Escalated for manual assignment</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <h3 class="text-white font-semibold mb-3">LeadStage (examples)</h3>
+            <table class="text-sm w-full">
+              <tbody class="divide-y divide-gray-800">
+                <tr>
+                  <td class="py-2 pr-4 font-mono text-indigo-300">NEW</td>
+                  <td class="py-2 text-gray-300">Just captured from source</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono text-indigo-300">CONTACTED</td>
+                  <td class="py-2 text-gray-300">First contact made</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono text-indigo-300">SITE_VISIT</td>
+                  <td class="py-2 text-gray-300">Site visit scheduled/done</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono text-indigo-300">CLOSURE</td>
+                  <td class="py-2 text-gray-300">Negotiation / closing in progress</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <h3 class="text-white font-semibold mb-3">LeadPriority (examples)</h3>
+            <table class="text-sm w-full">
+              <tbody class="divide-y divide-gray-800">
+                <tr>
+                  <td class="py-2 pr-4 font-mono text-red-400">HOT</td>
+                  <td class="py-2 text-gray-300">High-intent lead, needs urgent follow-up</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono text-amber-400">WARM</td>
+                  <td class="py-2 text-gray-300">Engaged but needs nurturing</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono text-gray-400">COLD</td>
+                  <td class="py-2 text-gray-300">Low-intent, long-term nurture</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <h3 class="text-white font-semibold mb-3">Follow-up Status</h3>
+            <table class="text-sm w-full">
+              <tbody class="divide-y divide-gray-800">
+                <tr>
+                  <td class="py-2 pr-4 font-mono text-amber-400">pending</td>
+                  <td class="py-2 text-gray-300">Upcoming / yet to be completed</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono text-green-400">done</td>
+                  <td class="py-2 text-gray-300">Follow-up completed</td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-4 font-mono text-gray-400">skipped</td>
+                  <td class="py-2 text-gray-300">Skipped or no longer needed</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════
+           SUMMARY TABLE
+      ══════════════════════════════════════════ -->
+      <section id="summary">
+        <h2 class="text-2xl font-bold text-white mb-6">All Endpoints Summary</h2>
+        <div class="overflow-x-auto">
+          <table class="text-sm w-full">
+            <thead>
+              <tr class="text-gray-500 border-b border-gray-700 text-left">
+                <th class="py-2 pr-3">#</th>
+                <th class="py-2 pr-3">Method</th>
+                <th class="py-2 pr-6">Path</th>
+                <th class="py-2 pr-4">Permission</th>
+                <th class="py-2">Description</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800">
+              <tr class="hover:bg-gray-900 transition">
+                <td class="py-2 pr-3 text-gray-500">1</td>
+                <td class="py-2 pr-3"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td>
+                <td class="py-2 pr-6 font-mono text-indigo-300">/api/leads/webhook</td>
+                <td class="py-2 pr-4 font-mono text-xs text-gray-400">HMAC only</td>
+                <td class="py-2 text-gray-300">Webhook intake — create or link leads</td>
+              </tr>
+
+              <tr class="hover:bg-gray-900 transition">
+                <td class="py-2 pr-3 text-gray-500">2</td>
+                <td class="py-2 pr-3"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td>
+                <td class="py-2 pr-6 font-mono text-indigo-300">/api/leads/assignment/:id</td>
+                <td class="py-2 pr-4 font-mono text-xs text-gray-400">lead.assign</td>
+                <td class="py-2 text-gray-300">Manually assign lead to agent</td>
+              </tr>
+
+              <tr class="hover:bg-gray-900 transition">
+                <td class="py-2 pr-3 text-gray-500">3</td>
+                <td class="py-2 pr-3"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td>
+                <td class="py-2 pr-6 font-mono text-indigo-300">/api/leads/assignment/admin/escalated</td>
+                <td class="py-2 pr-4 font-mono text-xs text-gray-400">lead.escalation</td>
+                <td class="py-2 text-gray-300">List escalated leads</td>
+              </tr>
+
+              <tr class="hover:bg-gray-900 transition">
+                <td class="py-2 pr-3 text-gray-500">4</td>
+                <td class="py-2 pr-3"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td>
+                <td class="py-2 pr-6 font-mono text-indigo-300">/api/leads/assignment/admin/escalated/:id/assign</td>
+                <td class="py-2 pr-4 font-mono text-xs text-gray-400">lead.assign</td>
+                <td class="py-2 text-gray-300">Assign escalated lead to agent</td>
+              </tr>
+
+              <tr class="hover:bg-gray-900 transition">
+                <td class="py-2 pr-3 text-gray-500">5</td>
+                <td class="py-2 pr-3"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td>
+                <td class="py-2 pr-6 font-mono text-indigo-300">/api/leads/followup/:id/followups</td>
+                <td class="py-2 pr-4 font-mono text-xs text-gray-400">lead.write</td>
+                <td class="py-2 text-gray-300">Create follow-up for a lead</td>
+              </tr>
+
+              <tr class="hover:bg-gray-900 transition">
+                <td class="py-2 pr-3 text-gray-500">6</td>
+                <td class="py-2 pr-3"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td>
+                <td class="py-2 pr-6 font-mono text-indigo-300">/api/leads/followup/:id/followups</td>
+                <td class="py-2 pr-4 font-mono text-xs text-gray-400">lead.read</td>
+                <td class="py-2 text-gray-300">List follow-ups for a lead</td>
+              </tr>
+
+              <tr class="hover:bg-gray-900 transition">
+                <td class="py-2 pr-3 text-gray-500">7</td>
+                <td class="py-2 pr-3"><span class="badge-patch text-xs font-mono font-bold px-2 py-0.5 rounded">PATCH</span></td>
+                <td class="py-2 pr-6 font-mono text-indigo-300">/api/leads/followup/:id/status</td>
+                <td class="py-2 pr-4 font-mono text-xs text-gray-400">lead.write</td>
+                <td class="py-2 text-gray-300">Update lead status / stage / priority</td>
+              </tr>
+
+              <tr class="hover:bg-gray-900 transition">
+                <td class="py-2 pr-3 text-gray-500">8</td>
+                <td class="py-2 pr-3"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td>
+                <td class="py-2 pr-6 font-mono text-indigo-300">/api/leads/followup/:id/stage-history</td>
+                <td class="py-2 pr-4 font-mono text-xs text-gray-400">lead.read</td>
+                <td class="py-2 text-gray-300">Get stage-change history for a lead</td>
+              </tr>
+
+              <tr class="hover:bg-gray-900 transition">
+                <td class="py-2 pr-3 text-gray-500">9</td>
+                <td class="py-2 pr-3"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td>
+                <td class="py-2 pr-6 font-mono text-indigo-300">/api/leads/followup/admin</td>
+                <td class="py-2 pr-4 font-mono text-xs text-gray-400">lead.read</td>
+                <td class="py-2 text-gray-300">Admin list of follow-ups (filters + pagination)</td>
+              </tr>
+
+              <tr class="hover:bg-gray-900 transition">
+                <td class="py-2 pr-3 text-gray-500">10</td>
+                <td class="py-2 pr-3"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td>
+                <td class="py-2 pr-6 font-mono text-indigo-300">/api/leads/followup/admin/funnel</td>
+                <td class="py-2 pr-4 font-mono text-xs text-gray-400">lead.read</td>
+                <td class="py-2 text-gray-300">Stage funnel analytics</td>
+              </tr>
+
+              <tr class="hover:bg-gray-900 transition">
+                <td class="py-2 pr-3 text-gray-500">11</td>
+                <td class="py-2 pr-3"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td>
+                <td class="py-2 pr-6 font-mono text-indigo-300">/api/leads/followup/admin/ratings</td>
+                <td class="py-2 pr-4 font-mono text-xs text-gray-400">lead.read</td>
+                <td class="py-2 text-gray-300">Ratings analytics grouped by stage</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="border-t border-gray-800 px-6 md:px-12 py-6 mt-12 text-sm text-gray-500 flex items-center justify-between">
+      <span>CRM Backend · Lead Management API Reference</span>
+      <span>Generated Mar 2026</span>
+    </div>
+  </main>
+
+</body>
+</html>
+

@@ -1,0 +1,68 @@
+import type { NextFunction, Response } from "express";
+import { prisma } from "@/db/db.js";
+import type { AuthRequest } from "@/types/auth-request.js";
+import { UnauthorizedError } from "@/utils/http-errors.util.js";
+import { verifyAccessToken } from "@/utils/jwt.utils.js";
+
+// /src/middlewares/auth.middleware.ts
+export async function requireAuth(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    const auth = req.headers.authorization;
+    if (!auth?.startsWith("Bearer "))
+      throw new UnauthorizedError("Missing token");
+
+    const token = auth.split(" ")[1];
+    if (!token) throw new UnauthorizedError("Missing token");
+
+    let payload: { sub: string };
+    try {
+      payload = verifyAccessToken(token);
+    } catch {
+      throw new UnauthorizedError("Invalid or expired token");
+    }
+
+    // Fetch user, roles, and permissions properly
+    const user = await prisma.user.findUnique({
+      where: { id: payload.sub },
+      include: {
+        roles: {
+          include: {
+            role: {
+              include: {
+                permissions: {
+                  include: { permission: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!user) throw new UnauthorizedError("User not found");
+
+    // Flatten permissions from all roles
+    const permissionSet = new Set<string>();
+    for (const userRole of user.roles) {
+      for (const rolePerm of userRole.role.permissions) {
+        permissionSet.add(rolePerm.permission.key);
+      }
+    }
+
+    // Attach to request
+    req.user = {
+      id: user.id,
+      roleIds: user.roles.map((r) => r.roleId),
+    };
+
+    req.permissions = permissionSet;
+
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+}

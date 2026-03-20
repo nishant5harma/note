@@ -1,0 +1,55 @@
+import { Factory } from "fishery";
+import { Prisma } from "@prisma/client";
+export declare const leadFactory: Factory<{
+    id: string;
+    name: string | null;
+    email: string | null;
+    status: import("@prisma/client").$Enums.LeadStatus;
+    source: string | null;
+    priority: import("@prisma/client").$Enums.LeadPriority;
+    createdAt: Date;
+    assignedTeamId: string | null;
+    phone: string | null;
+    payload: Prisma.JsonValue | null;
+    externalId: string | null;
+    stage: import("@prisma/client").$Enums.LeadStage;
+    dedupeHash: string | null;
+    assignedToId: string | null;
+    assignedAt: Date | null;
+    updatedAt: Date;
+}, any, {
+    id: string;
+    name: string | null;
+    email: string | null;
+    status: import("@prisma/client").$Enums.LeadStatus;
+    source: string | null;
+    priority: import("@prisma/client").$Enums.LeadPriority;
+    createdAt: Date;
+    assignedTeamId: string | null;
+    phone: string | null;
+    payload: Prisma.JsonValue | null;
+    externalId: string | null;
+    stage: import("@prisma/client").$Enums.LeadStage;
+    dedupeHash: string | null;
+    assignedToId: string | null;
+    assignedAt: Date | null;
+    updatedAt: Date;
+}, import("fishery").DeepPartialObject<{
+    id: string;
+    name: string | null;
+    email: string | null;
+    status: import("@prisma/client").$Enums.LeadStatus;
+    source: string | null;
+    priority: import("@prisma/client").$Enums.LeadPriority;
+    createdAt: Date;
+    assignedTeamId: string | null;
+    phone: string | null;
+    payload: Prisma.JsonValue | null;
+    externalId: string | null;
+    stage: import("@prisma/client").$Enums.LeadStage;
+    dedupeHash: string | null;
+    assignedToId: string | null;
+    assignedAt: Date | null;
+    updatedAt: Date;
+}>>;
+//# sourceMappingURL=lead.factory.d.ts.map

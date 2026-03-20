@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CRM Backend — Audit Logs</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-950 text-gray-200">
+    <div class="max-w-6xl mx-auto px-6 py-10">
+      <header class="mb-10">
+        <h1 class="text-3xl font-extrabold text-white">Audit Logs</h1>
+        <p class="text-gray-400 mt-2">
+          Backend activity tracking for security + debugging. This page documents what is logged, and how
+          frontend/admin can fetch logs.
+        </p>
+      </header>
+
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-3">What is an AuditLog?</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-3 text-sm">
+          <p>
+            Every audit row is stored in DB table <code class="text-indigo-200">AuditLog</code> with:
+          </p>
+          <ul class="list-disc list-inside text-gray-300 space-y-1">
+            <li><strong class="text-white">userId</strong>: who did it (null for system/webhook)</li>
+            <li><strong class="text-white">action</strong>: what happened (e.g. <code>lead.assign</code>)</li>
+            <li><strong class="text-white">resource</strong>: which module/entity (e.g. <code>lead</code>)</li>
+            <li><strong class="text-white">resourceId</strong>: entity id (lead id, sourcepool id, …)</li>
+            <li><strong class="text-white">payload</strong>: extra JSON details (old/new values, target user, etc.)</li>
+            <li><strong class="text-white">createdAt</strong>: timestamp</li>
+          </ul>
+          <p class="text-gray-400">
+            Access is protected via RBAC permission <code class="text-indigo-200">auditlog.read</code>.
+          </p>
+        </div>
+      </section>
+
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-3">Currently logged actions</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 text-sm space-y-4">
+          <div>
+            <p class="font-semibold text-white mb-1">Leads (webhook + assignment + followups)</p>
+            <ul class="list-disc list-inside text-gray-300 space-y-1">
+              <li><code>lead.create</code> — webhook created a new lead</li>
+              <li><code>webhook.link</code> — webhook event linked to an existing lead (dedupe)</li>
+              <li><code>lead.assign</code> — auto-assignment worker assigned lead to a user</li>
+              <li><code>lead.assign.manual</code> — manager/admin manually assigned lead to a user</li>
+              <li><code>lead.followup.create</code> — follow-up created on a lead</li>
+              <li><code>lead.status.update</code> — lead status/stage/priority updated (also creates follow-up)</li>
+            </ul>
+          </div>
+
+          <div>
+            <p class="font-semibold text-white mb-1">Source mapping</p>
+            <ul class="list-disc list-inside text-gray-300 space-y-1">
+              <li><code>sourcepool.upsert</code> — create/update mapping for a source</li>
+              <li><code>sourcepool.update</code> — patch mapping by source key</li>
+              <li><code>sourcepool.delete</code> — delete mapping</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-3">Audit APIs (fetch logs)</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 text-sm space-y-4">
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-emerald-600 text-white">GET</span>
+              <code class="text-white font-mono text-sm">/api/audit-logs</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + auditlog.read</span>
+            </div>
+            <pre class="text-xs text-yellow-200">GET /api/audit-logs?page=1&limit=50&resource=lead&actionPrefix=lead.&resourceId=&lt;leadId&gt;
+Authorization: Bearer &lt;token&gt;</pre>
+            <p class="text-gray-400 text-xs mt-2">
+              Filters supported:
+              <code>page</code>, <code>limit</code>, <code>userId</code>, <code>roleName</code>, <code>action</code>,
+              <code>actionPrefix</code>, <code>resource</code>, <code>resourceId</code>, <code>from</code>, <code>to</code>,
+              <code>q</code>.
+            </p>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-emerald-600 text-white">GET</span>
+              <code class="text-white font-mono text-sm">/api/audit-logs/:id</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + auditlog.read</span>
+            </div>
+            <pre class="text-xs text-yellow-200">GET /api/audit-logs/&lt;auditLogId&gt;
+Authorization: Bearer &lt;token&gt;</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-3">Frontend usage examples</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5 text-sm space-y-4">
+          <div class="bg-gray-950 rounded-lg p-4">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+              Example 1) Audit trail for a single Lead
+            </p>
+            <pre class="text-xs text-yellow-200">GET /api/audit-logs?resource=lead&resourceId=&lt;leadId&gt;&limit=100
+Authorization: Bearer &lt;token&gt;</pre>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+              Example 2) Only assignments (auto + manual)
+            </p>
+            <pre class="text-xs text-yellow-200">GET /api/audit-logs?resource=lead&actionPrefix=lead.assign&limit=50
+Authorization: Bearer &lt;token&gt;</pre>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+              Example 3) What changed today?
+            </p>
+            <pre class="text-xs text-yellow-200">GET /api/audit-logs?from=2026-03-17T00:00:00.000Z&to=2026-03-17T23:59:59.999Z&limit=200
+Authorization: Bearer &lt;token&gt;</pre>
+          </div>
+        </div>
+      </section>
+
+      <footer class="text-xs text-gray-500 mt-10">
+        <p>
+          Notes: webhook endpoint itself is HMAC based; audit fetch requires JWT + RBAC permission
+          <code class="text-indigo-200">auditlog.read</code>.
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>
+

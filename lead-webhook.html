@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRM API — Lead Webhook Intake</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { DEFAULT: '#6366f1', dark: '#4f46e5', light: '#a5b4fc' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    html { scroll-behavior: smooth; }
+    pre { white-space: pre-wrap; word-break: break-all; }
+    .badge-post { background:#dbeafe; color:#1e40af; border:1px solid #93c5fd; }
+  </style>
+</head>
+<body class="bg-gray-950 text-gray-200 font-sans antialiased">
+
+  <!-- Sidebar -->
+  <aside class="fixed top-0 left-0 h-full w-64 bg-gray-900 border-r border-gray-800 overflow-y-auto z-30 hidden lg:flex flex-col">
+    <div class="px-6 py-5 border-b border-gray-800">
+      <span class="text-xs font-semibold tracking-widest text-indigo-400 uppercase">CRM Backend</span>
+      <h1 class="text-lg font-bold text-white mt-1">Lead Webhook Intake</h1>
+    </div>
+    <nav class="flex-1 px-4 py-4 space-y-1 text-sm">
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-2 pb-1">Overview</p>
+      <a href="#overview" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">What this endpoint does</a>
+      <a href="#security" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Security &amp; HMAC</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Endpoint</p>
+      <a href="#endpoint" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">POST /api/leads/webhook</a>
+      <a href="#payload"  class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Payload format</a>
+      <a href="#responses" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Responses</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Integrations</p>
+      <a href="#google-forms" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Google Forms</a>
+      <a href="#website-form" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Website backend</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Frontend Guide</p>
+      <a href="#frontend-guide" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">How to use from frontend</a>
+      <a href="#frontend-view-leads" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Frontend: View leads</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Business Logic</p>
+      <a href="#dedupe"   class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Deduplication</a>
+      <a href="#creation" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Lead creation</a>
+      <a href="#events"   class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Webhook events &amp; audit</a>
+      <a href="#assignment" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Automatic assignment</a>
+    </nav>
+    <div class="px-6 py-4 border-t border-gray-800 text-xs text-gray-500">
+      Base URL: <span class="text-indigo-400 font-mono">/api/leads/webhook</span>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="lg:ml-64 min-h-screen">
+
+    <!-- Hero -->
+    <div class="bg-gradient-to-br from-gray-900 via-sky-950 to-gray-900 border-b border-gray-800 px-6 md:px-12 py-12">
+      <div class="max-w-4xl">
+        <span class="inline-block text-xs font-semibold tracking-widest text-sky-400 uppercase mb-3">CRM Backend · Leads</span>
+        <h2 class="text-3xl md:text-4xl font-extrabold text-white mb-4">Lead Webhook Intake</h2>
+        <p class="text-gray-400 text-base md:text-lg leading-relaxed mb-6">
+          This document explains how external systems (portals, Google Forms, websites, etc.) should call
+          <code class="text-sky-300 bg-gray-900 px-1.5 py-0.5 rounded text-sm">POST /api/leads/webhook</code>
+          to create and update leads inside the CRM.
+        </p>
+        <div class="flex flex-wrap gap-3 text-sm">
+          <span class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-gray-300">
+            Endpoint&nbsp;<span class="text-indigo-400 font-mono font-semibold">/api/leads/webhook</span>
+          </span>
+          <span class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-gray-300">
+            Auth&nbsp;<span class="text-amber-400 font-mono">HMAC signature</span>
+          </span>
+          <span class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-gray-300">
+            Creates leads · Links duplicates · Queues assignment
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="px-6 md:px-12 py-10 max-w-5xl space-y-16">
+
+      <!-- Overview -->
+      <section id="overview">
+        <h2 class="text-2xl font-bold text-white mb-4">What this endpoint does</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+          <p class="text-gray-300 text-sm mb-4">
+            <strong class="text-white">/api/leads/webhook</strong> is the <em>only</em> entry point for external
+            sources to send new leads into the CRM. It is used by:
+          </p>
+          <ul class="list-disc list-inside text-sm text-gray-300 space-y-1 mb-4">
+            <li>Property portals (99acres, MagicBricks, etc.)</li>
+            <li>Google Forms (lead capture forms)</li>
+            <li>Website contact / enquiry forms</li>
+            <li>Any custom integration that wants to push lead data</li>
+          </ul>
+          <p class="text-gray-300 text-sm mb-2">For every call, the backend will:</p>
+          <ol class="list-decimal list-inside text-sm text-gray-300 space-y-1">
+            <li>Verify the HMAC signature (security).</li>
+            <li>Normalize &amp; extract fields like <code>name</code>, <code>email</code>, <code>phone</code>, <code>source</code>, <code>externalId</code>.</li>
+            <li>Compute a dedupe hash based on phone/email/source/externalId.</li>
+            <li>Either <strong>link to an existing lead</strong> or <strong>create a new lead</strong>.</li>
+            <li>Create a <code>LeadWebhookEvent</code> row for full audit history.</li>
+            <li>Insert an initial <code>LeadAssignment</code> and queue the lead for <strong>automatic assignment</strong>.</li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- Security -->
+      <section id="security">
+        <h2 class="text-2xl font-bold text-white mb-4">Security &amp; HMAC Signature</h2>
+        <div class="bg-sky-950 border border-sky-900 rounded-xl p-6 text-sm text-sky-100 space-y-4">
+          <p>
+            The webhook is <strong>not protected by JWT tokens</strong>. Instead, each integration uses a
+            shared secret key and HMAC (hash-based message authentication code).
+          </p>
+          <p class="font-semibold">How it works:</p>
+          <ol class="list-decimal list-inside space-y-1">
+            <li>The sender (Google Apps Script, portal backend, website backend, etc.) has a secret key (e.g. <code>WEBHOOK_SECRET_DEFAULT</code> or a provider-specific secret like <code>WEBHOOK_SECRET_GOOGLE_FORMS</code>).</li>
+            <li>Before sending, it serializes the JSON body to a string <code>bodyJson</code>.</li>
+            <li>Computes <code>HMAC_SHA256(bodyJson, secret)</code> and encodes as hex.</li>
+            <li>Sends that value in a header such as <code>X-Signature</code>.</li>
+            <li>The CRM backend recomputes the same HMAC and rejects the request if signatures do not match.</li>
+          </ol>
+          <p>
+            This ensures only trusted systems (that know the secret) can create or update leads.
+          </p>
+        </div>
+      </section>
+
+      <!-- Endpoint Details -->
+      <section id="endpoint">
+        <h2 class="text-2xl font-bold text-white mb-1">Endpoint Details</h2>
+        <p class="text-gray-400 text-sm mb-6">Base path: <code class="text-indigo-400 font-mono">/api/leads/webhook</code></p>
+
+        <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/leads/webhook</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">HMAC only · no JWT</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Headers</p>
+              <table class="text-sm w-full">
+                <thead>
+                  <tr class="text-gray-500 border-b border-gray-700">
+                    <th class="text-left py-1 pr-4">Header</th>
+                    <th class="text-left py-1 pr-4">Required</th>
+                    <th class="text-left py-1">Description</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                  <tr>
+                    <td class="py-2 pr-4 font-mono text-indigo-300">Content-Type</td>
+                    <td class="py-2 pr-4 text-gray-300">Yes</td>
+                    <td class="py-2 text-gray-300">Use <code>application/json</code>.</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 pr-4 font-mono text-indigo-300">x-lead-source / x-source</td>
+                    <td class="py-2 pr-4 text-gray-300">Recommended</td>
+                    <td class="py-2 text-gray-300">
+                      Source identifier: <code>magicbricks</code>, <code>99acres</code>, <code>google_forms</code>, <code>website</code>, etc.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 pr-4 font-mono text-indigo-300">x-idempotency-key</td>
+                    <td class="py-2 pr-4 text-gray-300">Optional</td>
+                    <td class="py-2 text-gray-300">Unique key per submission to de-duplicate retries.</td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 pr-4 font-mono text-indigo-300">x-signature</td>
+                    <td class="py-2 pr-4 text-gray-300">Yes</td>
+                    <td class="py-2 text-gray-300">
+                      HMAC SHA256 signature of the raw JSON body, hex-encoded. The backend recomputes and verifies this.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div id="payload">
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Recommended Payload Shape</p>
+              <p class="text-gray-300 text-sm mb-2">
+                The backend can work with arbitrary JSON, but this is the <strong>canonical shape</strong> we recommend
+                for all sources (portals, forms, website, etc.):
+              </p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "provider": "google_forms",          // string - which system is sending the lead
+  "externalId": "GF-2025-06-01-001",   // string - unique ID from that system
+  "name": "Ravi Kumar",                // string - full name
+  "email": "ravi@example.com",         // string - email address (optional but recommended)
+  "phone": "+919876543210",            // string - phone number in international format
+  "source": "google_forms",            // string - marketing/source tag used for reporting
+  "payload": {                         // object - full original payload from the source
+    /* everything else from the form / portal */
+  }
+}</pre>
+              <p class="text-gray-400 text-xs mt-2">
+                <strong>Important:</strong> at least one of <code>phone</code> or <code>email</code> should be provided
+                for meaningful deduplication.
+              </p>
+            </div>
+
+            <div id="responses">
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Responses</p>
+
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">1) New lead created · 201</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "note": "created",
+  "leadId": "cllead1...",
+  "webhookEventId": "clwh1..."
+}</pre>
+
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-4 mb-1">2) Existing lead linked · 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "note": "linked",
+  "leadId": "clleadExisting...",
+  "webhookEventId": "clwh2..."
+}</pre>
+
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-4 mb-1">3) In-flight / duplicate · 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "ok": true,
+  "note": "processing in-flight",
+  "eventId": "clwh3..."
+}</pre>
+
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-4 mb-1">4) Signature invalid · 401/403</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-red-300">{
+  "error": "invalid signature"
+}</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Google Forms integration -->
+      <section id="google-forms">
+        <h2 class="text-2xl font-bold text-white mb-4">Example: Google Forms Integration</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-4 text-sm text-gray-300">
+          <p>
+            You can connect a Google Form directly to the webhook using a small Apps Script that runs on every form
+            submission.
+          </p>
+          <ol class="list-decimal list-inside space-y-1">
+            <li>Open your Google Form &rarr; Script editor.</li>
+            <li>Paste the script below (adjust field names and secret).</li>
+            <li>Create a trigger for <code>onFormSubmit</code> on <em>Form submit</em>.</li>
+          </ol>
+
+          <pre class="bg-gray-950 rounded-lg p-4 text-xs text-yellow-200">// Apps Script example
+const WEBHOOK_URL = 'https://your-domain.com/api/leads/webhook';
+const SHARED_SECRET = 'YOUR_HMAC_SECRET';
+
+function onFormSubmit(e) {
+  const resp = e.namedValues; // map: question title -> [answers]
+
+  const body = {
+    provider: 'google_forms',
+    externalId: resp['Timestamp'][0],          // or any unique field
+    name: resp['Name'][0],
+    email: resp['Email'][0],
+    phone: resp['Phone'][0],
+    source: 'google_forms',
+    payload: resp
+  };
+
+  const bodyJson = JSON.stringify(body);
+  const signature = Utilities.computeHmacSha256Signature(bodyJson, SHARED_SECRET);
+  const sigHex = signature
+    .map(function (b) { return ('0' + (b & 0xff).toString(16)).slice(-2); })
+    .join('');
+
+  UrlFetchApp.fetch(WEBHOOK_URL, {
+    method: 'post',
+    contentType: 'application/json',
+    payload: bodyJson,
+    headers: {
+      'x-lead-source': 'google_forms',
+      'x-idempotency-key': resp['Timestamp'][0],
+      'x-signature': sigHex
+    },
+    muteHttpExceptions: true
+  });
+}</pre>
+        </div>
+      </section>
+
+      <!-- Website backend integration -->
+      <section id="website-form">
+        <h2 class="text-2xl font-bold text-white mb-4">Example: Website Backend Integration</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-4 text-sm text-gray-300">
+          <p>
+            For a website (Next.js, Node, Laravel, etc.), you should call the webhook from your backend —
+            never directly from the browser — and sign the payload using your shared secret.
+          </p>
+
+          <pre class="bg-gray-950 rounded-lg p-4 text-xs text-yellow-200">// Node.js / Next.js API route example
+import crypto from 'crypto';
+import fetch from 'node-fetch';
+
+const WEBHOOK_URL = 'https://your-domain.com/api/leads/webhook';
+const SECRET = process.env.WEBHOOK_SECRET_DEFAULT;
+
+export async function sendLeadToWebhook(lead) {
+  const body = {
+    provider: 'website',
+    externalId: lead.id,       // stable unique ID from your system
+    name: lead.name,
+    email: lead.email,
+    phone: lead.phone,
+    source: 'website',
+    payload: lead
+  };
+
+  const bodyJson = JSON.stringify(body);
+
+  const signature = crypto
+    .createHmac('sha256', SECRET)
+    .update(bodyJson, 'utf8')
+    .digest('hex');
+
+  const res = await fetch(WEBHOOK_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-lead-source': 'website',
+      'x-idempotency-key': lead.id,
+      'x-signature': signature
+    },
+    body: bodyJson
+  });
+
+  const data = await res.json();
+  return { status: res.status, data };
+}</pre>
+        </div>
+      </section>
+
+      <!-- Frontend integration guide -->
+      <section id="frontend-guide">
+        <h2 class="text-2xl font-bold text-white mb-4">Frontend Integration Guide (How to Receive Leads)</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-6 text-sm text-gray-300">
+
+          <div>
+            <p class="font-semibold text-gray-100 mb-2">High-level flow</p>
+            <pre class="bg-gray-950 rounded-lg p-4 text-xs text-gray-300 leading-relaxed">
+User fills frontend form (website / app / Google Form)
+        ⬇
+Your frontend sends data to your own backend (e.g. /api/contact)
+        ⬇
+Your backend builds the canonical lead JSON + HMAC
+        ⬇
+CRM endpoint POST /api/leads/webhook
+        ⬇
+Lead is created/linked and appears in CRM Leads UI
+            </pre>
+            <p class="mt-2">
+              <strong>Important:</strong> the frontend never calls <code>/api/leads/webhook</code> directly.
+              Only trusted backends (which know the HMAC secret) are allowed to talk to the webhook.
+            </p>
+          </div>
+
+          <div>
+            <p class="font-semibold text-gray-100 mb-2">Step 1 — Configure CRM webhook URL &amp; secret</p>
+            <ul class="list-decimal list-inside space-y-1">
+              <li>In the CRM backend <code>.env</code>, set one of these secrets:
+                <pre class="bg-gray-950 rounded-lg p-3 mt-2 text-xs text-yellow-200">
+WEBHOOK_SECRET_DEFAULT=some-long-random-string
+WEBHOOK_SECRET_GOOGLE_FORMS=google-forms-secret-if-used
+WEBHOOK_SECRET_FACEBOOK=facebook-secret-from-app</pre>
+              </li>
+              <li>Expose the backend over HTTPS so the webhook is reachable, for example:
+                <ul class="list-disc list-inside ml-5 mt-1">
+                  <li>Dev: <code>http://&lt;your-dev-ip&gt;:4000/api/leads/webhook</code></li>
+                  <li>Prod: <code>https://your-domain.com/api/leads/webhook</code></li>
+                </ul>
+              </li>
+              <li>Use the same secret value in all senders (website backend, Apps Script, Zapier, etc.).</li>
+              <li>
+                The secret used is selected by <code>x-lead-source</code>:
+                <ul class="list-disc list-inside ml-5 mt-1">
+                  <li>If <code>x-lead-source: google_forms</code> then backend uses <code>WEBHOOK_SECRET_GOOGLE_FORMS</code> (or falls back to default).</li>
+                  <li>If provider is missing, backend uses <code>WEBHOOK_SECRET_DEFAULT</code>.</li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <p class="font-semibold text-gray-100 mb-2">Step 2 — Frontend form submits to your own API</p>
+            <p class="mb-2">
+              Example React/Next.js form that posts to <code>/api/contact</code> on your website backend:
+            </p>
+            <pre class="bg-gray-950 rounded-lg p-4 text-xs text-yellow-200">// React example
+async function handleSubmit(e) {
+  e.preventDefault();
+
+  const body = {
+    name: e.target.name.value,
+    email: e.target.email.value,
+    phone: e.target.phone.value,
+    message: e.target.message.value,
+  };
+
+  const res = await fetch('/api/contact', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json();
+  console.log('CRM webhook response:', data);
+}</pre>
+          </div>
+
+          <div>
+            <p class="font-semibold text-gray-100 mb-2">Step 3 — Your backend forwards to /api/leads/webhook</p>
+            <p class="mb-2">
+              In your website backend route (for example <code>/api/contact</code>), convert the form data to the
+              canonical lead payload and forward it to the CRM:
+            </p>
+            <pre class="bg-gray-950 rounded-lg p-4 text-xs text-yellow-200">// /api/contact backend handler (Node/Next.js/Express)
+import crypto from 'crypto';
+import fetch from 'node-fetch';
+
+const CRM_WEBHOOK_URL = 'https://your-domain.com/api/leads/webhook';
+const SECRET = process.env.WEBHOOK_SECRET_DEFAULT;
+
+export async function handleContact(req, res) {
+  const { name, email, phone, message } = req.body;
+
+  const payload = {
+    provider: 'website',
+    externalId: `web-${Date.now()}`, // unique per submission
+    name,
+    email,
+    phone,
+    source: 'website',
+    payload: { name, email, phone, message },
+  };
+
+  const bodyJson = JSON.stringify(payload);
+
+  const signature = crypto
+    .createHmac('sha256', SECRET)
+    .update(bodyJson, 'utf8')
+    .digest('hex');
+
+  const crmRes = await fetch(CRM_WEBHOOK_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-lead-source': 'website',
+      'x-idempotency-key': payload.externalId,
+      'x-signature': signature,
+    },
+    body: bodyJson,
+  });
+
+  const data = await crmRes.json();
+  res.status(crmRes.status).json(data);
+}</pre>
+            <p class="mt-2">
+              After this is in place, <strong>every time the frontend form is submitted</strong>, a lead will be
+              created (or linked) in the CRM and show up in the Leads section with
+              <code>source = "website"</code>.
+            </p>
+          </div>
+
+          <div>
+            <p class="font-semibold text-gray-100 mb-2">Step 4 — Testing from frontend</p>
+            <ol class="list-decimal list-inside space-y-1">
+              <li>Open your frontend form, fill in test data, submit.</li>
+              <li>Check your website backend logs to confirm it hit <code>/api/contact</code>.</li>
+              <li>Check the CRM logs / Leads UI to see that a new lead was created with the correct
+                <code>name</code>, <code>phone</code>, <code>email</code>, and <code>source</code>.
+              </li>
+              <li>Once working, repeat the same pattern for other forms (e.g. landing pages, mobile app forms).</li>
+            </ol>
+          </div>
+
+          <div class="bg-indigo-950 border border-indigo-800 rounded-lg p-4">
+            <p class="font-semibold text-indigo-100 mb-2">Step 5 — How to view all leads (API + Postman)</p>
+            <p class="text-indigo-100/90 mb-3">
+              After webhook integration is active, you can view all leads using these protected endpoints.
+              These require <strong>JWT</strong> auth and <code>lead.read</code> permission.
+            </p>
+
+            <p class="text-xs font-semibold text-indigo-200 uppercase tracking-wider mb-2">1) Login to get token</p>
+            <pre class="bg-gray-950 rounded-lg p-4 text-xs text-yellow-200">POST /api/auth/login
+Content-Type: application/json
+
+{
+  "email": "superadmin@example.com",
+  "password": "SuperSecurePassword123!"
+}</pre>
+
+            <p class="text-xs font-semibold text-indigo-200 uppercase tracking-wider mt-4 mb-2">2) List leads</p>
+            <pre class="bg-gray-950 rounded-lg p-4 text-xs text-yellow-200">GET /api/leads?page=1&limit=50&q=ravi&source=google_forms&status=NEW
+Authorization: Bearer &lt;accessToken&gt;</pre>
+            <p class="text-indigo-100/80 text-xs mt-2">
+              Filters supported: <code>q</code>, <code>source</code>, <code>status</code>, <code>stage</code>, <code>priority</code>,
+              <code>assignedToId</code>, <code>assignedTeamId</code>, <code>from</code>, <code>to</code>.
+            </p>
+
+            <p class="text-xs font-semibold text-indigo-200 uppercase tracking-wider mt-4 mb-2">3) Get lead details</p>
+            <pre class="bg-gray-950 rounded-lg p-4 text-xs text-yellow-200">GET /api/leads/:id
+Authorization: Bearer &lt;accessToken&gt;</pre>
+            <p class="text-indigo-100/80 text-xs mt-2">
+              This returns the full lead with assignments, webhook events, notes, follow-ups, escalations, and stage history.
+            </p>
+          </div>
+
+          <div id="frontend-view-leads" class="bg-gray-900 border border-gray-800 rounded-lg p-4">
+            <p class="font-semibold text-gray-100 mb-2">Frontend: View all leads (list + detail)</p>
+            <p class="text-gray-300 mb-3">
+              To show leads in your frontend, use the new endpoints <code>GET /api/leads</code> and <code>GET /api/leads/:id</code>.
+              These are protected endpoints and require:
+              <strong class="text-white">JWT token</strong> + <strong class="text-white">lead.read permission</strong>.
+            </p>
+
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">1) Login (get accessToken)</p>
+            <pre class="bg-gray-950 rounded-lg p-4 text-xs text-yellow-200">POST /api/auth/login
+Content-Type: application/json
+
+{ "email": "superadmin@example.com", "password": "SuperSecurePassword123!" }</pre>
+
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-4 mb-2">2) Fetch leads list</p>
+            <pre class="bg-gray-950 rounded-lg p-4 text-xs text-yellow-200">// Example (React / Web)
+const API_BASE_URL = "http://&lt;YOUR_IP&gt;:4000";
+
+async function fetchLeads(token) {
+  const params = new URLSearchParams({
+    page: "1",
+    limit: "50",
+    // optional filters:
+    // source: "google_forms",
+    // status: "NEW",
+    // q: "ravi",
+  });
+
+  const res = await fetch(`${API_BASE_URL}/api/leads?${params.toString()}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return await res.json(); // { ok, items, meta }
+}</pre>
+
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-4 mb-2">3) Fetch one lead (detail page)</p>
+            <pre class="bg-gray-950 rounded-lg p-4 text-xs text-yellow-200">async function fetchLeadById(token, leadId) {
+  const res = await fetch(`${API_BASE_URL}/api/leads/${leadId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return await res.json(); // { ok, data }
+}</pre>
+
+            <p class="text-gray-400 text-xs mt-3">
+              Tip: After a webhook creates a lead, your UI can refresh the list by calling <code>GET /api/leads</code>.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Business logic -->
+      <section id="dedupe">
+        <h2 class="text-2xl font-bold text-white mb-4">Deduplication &amp; Lead Creation</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-6 text-sm text-gray-300">
+          <div>
+            <p class="font-semibold text-gray-100 mb-2">Deduplication</p>
+            <ul class="list-disc list-inside space-y-1">
+              <li>The backend computes a <strong>dedupe hash</strong> from:
+                <code>phone</code>, <code>email</code>, <code>source</code>, and <code>externalId</code>.
+              </li>
+              <li>It first tries to find an existing lead by <code>externalId</code>.</li>
+              <li>If not found, it tries by dedupe hash.</li>
+              <li>If still not found, a <strong>new lead</strong> is created.</li>
+            </ul>
+          </div>
+
+          <div id="creation">
+            <p class="font-semibold text-gray-100 mb-2">Lead Creation</p>
+            <ul class="list-disc list-inside space-y-1">
+              <li>A new <code>Lead</code> record is inserted with normalized fields (name, phone, email, source, etc.).</li>
+              <li>An initial <code>LeadAssignment</code> is created with:
+                <ul class="list-disc list-inside ml-5">
+                  <li><code>assignedTo = null</code></li>
+                  <li><code>assignedBy = "system"</code></li>
+                  <li><code>method = "auto"</code></li>
+                  <li><code>attempt = 0</code></li>
+                </ul>
+              </li>
+              <li>The lead ID is attached back to the <code>LeadWebhookEvent</code> created for this webhook call.</li>
+            </ul>
+          </div>
+
+          <div id="events">
+            <p class="font-semibold text-gray-100 mb-2">Webhook Events &amp; Audit</p>
+            <ul class="list-disc list-inside space-y-1">
+              <li>Every request creates a <code>LeadWebhookEvent</code> row (even if duplicate), which stores:
+                <ul class="list-disc list-inside ml-5">
+                  <li>Raw payload</li>
+                  <li>Provider / source</li>
+                  <li>Signature metadata</li>
+                  <li>Associated <code>leadId</code> if matched/created</li>
+                </ul>
+              </li>
+              <li>When a new lead is created, an audit record is also written:
+                <code>action = "lead.create"</code>, <code>resource = "lead"</code>, including <code>source</code> and <code>webhookEventId</code>.</li>
+            </ul>
+          </div>
+
+          <div id="assignment">
+            <p class="font-semibold text-gray-100 mb-2">Automatic Assignment</p>
+            <ul class="list-disc list-inside space-y-1">
+              <li>After storing the event and creating the lead, the system enqueues a job in the
+                <code>assignmentQueue</code>.</li>
+              <li>Background workers pick up this job and:
+                <ul class="list-disc list-inside ml-5">
+                  <li>Find the correct team via <code>SourcePool</code> configuration (if any).</li>
+                  <li>Use round-robin + capacity rules to pick an agent.</li>
+                  <li>Assign the lead to that agent and update <code>UserCapacity</code>.</li>
+                  <li>Send socket &amp; push notifications to the assigned user.</li>
+                </ul>
+              </li>
+              <li>If automatic assignment cannot find any suitable agent (e.g., all at capacity), the lead can
+                eventually be escalated and appear in <code>/api/leads/assignment/admin/escalated</code>.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="border-t border-gray-800 px-6 md:px-12 py-6 mt-12 text-sm text-gray-500 flex items-center justify-between">
+      <span>CRM Backend · Lead Webhook Intake Reference</span>
+      <span>Generated Mar 2026</span>
+    </div>
+  </main>
+
+</body>
+</html>
+

@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRM API — Leads Round-Robin Flow</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { DEFAULT: '#6366f1', dark: '#4f46e5', light: '#a5b4fc' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    html { scroll-behavior: smooth; }
+    pre { white-space: pre-wrap; word-break: break-all; }
+    .badge-get    { background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; }
+    .badge-post   { background:#dbeafe; color:#1e40af; border:1px solid #93c5fd; }
+    .badge-patch  { background:#ede9fe; color:#5b21b6; border:1px solid #c4b5fd; }
+  </style>
+</head>
+<body class="bg-gray-950 text-gray-200 font-sans antialiased">
+
+  <!-- ─── Sidebar ─────────────────────────────────────────────────── -->
+  <aside class="fixed top-0 left-0 h-full w-72 bg-gray-900 border-r border-gray-800 overflow-y-auto z-30 hidden lg:flex flex-col">
+    <div class="px-6 py-5 border-b border-gray-800">
+      <span class="text-xs font-semibold tracking-widest text-indigo-400 uppercase">CRM Backend</span>
+      <h1 class="text-lg font-bold text-white mt-1">Leads · Round Robin Flow</h1>
+    </div>
+    <nav class="flex-1 px-4 py-4 space-y-1 text-sm">
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-2 pb-1">Overview</p>
+      <a href="#overview" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">End-to-end flow</a>
+      <a href="#actors" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Who gets assigned</a>
+      <a href="#setup" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Setup (teams/pools)</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Intake</p>
+      <a href="#webhook" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Webhook (create lead)</a>
+      <a href="#dedupe" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Dedupe rules</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Assignment Engine</p>
+      <a href="#sourcepool" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Source → Team routing</a>
+      <a href="#roundrobin" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Round-robin selection</a>
+      <a href="#capacity" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Capacity rules</a>
+      <a href="#escalation" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Escalation</a>
+      <a href="#manual" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Manual assignment</a>
+      <a href="#testing" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Testing checklist</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Follow-ups</p>
+      <a href="#followups" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Create/List follow-ups</a>
+      <a href="#status" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Status/Stage updates</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Frontend API</p>
+      <a href="#view" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">View leads (list/detail)</a>
+      <a href="#endpoint-summary" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Endpoint summary</a>
+    </nav>
+    <div class="px-6 py-4 border-t border-gray-800 text-xs text-gray-500">
+      Base URL: <span class="text-indigo-400 font-mono">/api</span>
+    </div>
+  </aside>
+
+  <!-- ─── Main ──────────────────────────────────────────────────────── -->
+  <main class="lg:ml-72 min-h-screen">
+
+    <!-- Hero -->
+    <div class="bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 border-b border-gray-800 px-6 md:px-12 py-12">
+      <div class="max-w-4xl">
+        <span class="inline-block text-xs font-semibold tracking-widest text-indigo-400 uppercase mb-3">CRM Backend · Leads</span>
+        <h1 class="text-3xl md:text-4xl font-extrabold text-white mb-4">Lead Flow (Webhook → Round Robin → Follow-ups)</h1>
+        <p class="text-gray-400 text-base md:text-lg leading-relaxed mb-6">
+          A frontend-facing explanation of how leads enter the CRM, get assigned automatically via round-robin
+          (with capacity checks), and then move through follow-ups and status updates.
+        </p>
+        <div class="flex flex-wrap gap-3 text-sm">
+          <span class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-gray-300">
+            Intake&nbsp;<span class="text-indigo-400 font-mono font-semibold">POST /api/leads/webhook</span>
+          </span>
+          <span class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-gray-300">
+            View&nbsp;<span class="text-indigo-400 font-mono font-semibold">GET /api/leads</span>
+          </span>
+          <span class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-gray-300">
+            Follow-ups&nbsp;<span class="text-indigo-400 font-mono font-semibold">/api/leads/followup</span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="px-6 md:px-12 py-10 max-w-5xl space-y-20">
+
+      <!-- Overview -->
+      <section id="overview">
+        <h2 class="text-2xl font-bold text-white mb-4">End-to-end flow</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-4 text-sm text-gray-300">
+          <pre class="bg-gray-950 rounded-lg p-4 text-xs text-gray-300 leading-relaxed">
+1) External source sends a lead
+   - Website form / Google Form / Facebook Lead Ads / Portal
+   - Calls POST /api/leads/webhook (HMAC secured)
+
+2) Intake service normalizes + dedupes
+   - Computes dedupeHash using phone/email/source/externalId
+   - Creates LeadWebhookEvent for every request
+   - Creates Lead if not found (or links if found)
+
+3) Assignment job is enqueued
+   - Creates a LeadAssignment row (method: "auto", assignedTo: null)
+   - Background workers process the assignment queue
+
+4) Worker assigns to an employee (agent)
+   - Determines team via SourcePool mapping (optional)
+   - Chooses next eligible member by round-robin
+   - Enforces capacity (UserCapacity.used < maxOpen)
+   - Updates Lead.assignedToId (+ assignedAt)
+
+5) If no agent available → escalation
+   - Lead status can become UNASSIGNED_ESCALATED
+   - Manager can manually assign
+
+6) Agent actions
+   - Create follow-ups, update status/stage/priority, view stage history
+          </pre>
+        </div>
+      </section>
+
+      <section id="actors">
+        <h2 class="text-2xl font-bold text-white mb-4">Who receives leads automatically?</h2>
+        <div class="bg-amber-950 border border-amber-800 rounded-xl p-6 text-sm text-amber-100 space-y-3">
+          <p>
+            Leads are assigned automatically to <strong class="text-white">employees/agents</strong> in the round-robin pool.
+            Managers will only get leads automatically if they are also in the team member pool (i.e. part of the assignment roster).
+          </p>
+          <ul class="list-disc list-inside space-y-1">
+            <li><strong class="text-white">Employees/Agents</strong>: get assigned based on team membership + capacity.</li>
+            <li><strong class="text-white">Managers</strong>: typically monitor escalations and manually assign when required.</li>
+            <li><strong class="text-white">Everyone</strong>: never “broadcast assigned”. Each lead has exactly one assignee at a time (<code>assignedToId</code>).</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Setup guide -->
+      <section id="setup">
+        <h2 class="text-2xl font-bold text-white mb-4">Setup guide (Teams, Pools, Employees)</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-6 text-sm text-gray-300">
+          <p>
+            In this CRM, the “pool” for round-robin is simply a <strong class="text-white">Team</strong>.
+            The pool members are rows in <code>TeamMember</code>. Source-based routing is controlled by <code>SourcePool</code>.
+          </p>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <p class="font-semibold text-gray-100 mb-2">You need 4 things for perfect lead receiving</p>
+            <ol class="list-decimal list-inside space-y-1">
+              <li><strong class="text-white">Team(s)</strong> created (example: Website Team, Facebook Team).</li>
+              <li><strong class="text-white">Employees added as team members</strong> (these are the round-robin candidates).</li>
+              <li><strong class="text-white">SourcePool mapping</strong>: lead <code>source</code> → which team should receive it.</li>
+              <li><strong class="text-white">Capacity set</strong> (default maxOpen=10) so routing respects workload.</li>
+            </ol>
+          </div>
+
+          <div>
+            <p class="font-semibold text-gray-100 mb-2">Step 1 — Create a Team (Manager)</p>
+            <p class="text-gray-400 mb-2">Endpoint (JWT + <code>team.write</code>):</p>
+            <pre class="bg-gray-950 rounded-lg p-4 text-xs text-yellow-200">POST /api/teams
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{ "name": "Website Team", "leadId": null }</pre>
+            <p class="text-gray-400 text-xs mt-2">
+              Create separate teams if you want different sources to go to different employees.
+            </p>
+          </div>
+
+          <div>
+            <p class="font-semibold text-gray-100 mb-2">Step 2 — Add employees to the Team (Pool members)</p>
+            <p class="text-gray-400 mb-2">Endpoint (JWT + <code>team.write</code>):</p>
+            <pre class="bg-gray-950 rounded-lg p-4 text-xs text-yellow-200">POST /api/teams/&lt;teamId&gt;/members/bulk
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{
+  "userIds": ["&lt;empUserId1&gt;", "&lt;empUserId2&gt;", "&lt;empUserId3&gt;"],
+  "role": "MEMBER"
+}</pre>
+            <p class="text-gray-400 text-xs mt-2">
+              These users become the round-robin pool. Users can be in multiple teams.
+            </p>
+          </div>
+
+          <div>
+            <p class="font-semibold text-gray-100 mb-2">Step 3 — Decide the <code>source</code> values (very important)</p>
+            <p class="text-gray-400 mb-2">
+              When calling <code>POST /api/leads/webhook</code> you send a body field <code>source</code>.
+              This value is used for routing.
+            </p>
+            <pre class="bg-gray-950 rounded-lg p-4 text-xs text-yellow-200">// Examples (choose and keep consistent)
+source = "website"
+source = "google_forms"
+source = "facebook"
+source = "google_ads"
+source = "99acres"</pre>
+          </div>
+
+          <div>
+            <p class="font-semibold text-gray-100 mb-2">Step 4 — Create SourcePool mapping (source → team)</p>
+            <div class="bg-amber-950 border border-amber-800 rounded-lg p-4 text-amber-100">
+              <p class="font-semibold mb-1">Important</p>
+              <p>
+                There is currently <strong class="text-white">no HTTP endpoint</strong> in this backend to create/edit SourcePool.
+                SourcePool is a database table, so you configure it via Prisma/SQL/seed.
+              </p>
+            </div>
+            <p class="text-gray-400 mt-3 mb-2">Prisma example (run in a script/seed or Prisma Studio):</p>
+            <pre class="bg-gray-950 rounded-lg p-4 text-xs text-yellow-200">await prisma.sourcePool.upsert({
+  where: { source: "website" },
+  update: { teamId: "clteamWebsite...", active: true },
+  create: { source: "website", teamId: "clteamWebsite...", strategy: "round_robin", active: true },
+});</pre>
+            <p class="text-gray-400 text-xs mt-2">
+              Repeat for <code>google_forms</code>, <code>facebook</code>, etc.
+            </p>
+          </div>
+
+          <div>
+            <p class="font-semibold text-gray-100 mb-2">Step 5 — Capacity tuning (optional but recommended)</p>
+            <p class="text-gray-400 mb-2">
+              Capacity is stored in <code>UserCapacity</code>. If a user hits maxOpen, round-robin skips them.
+            </p>
+            <pre class="bg-gray-950 rounded-lg p-4 text-xs text-yellow-200">await prisma.userCapacity.upsert({
+  where: { userId: "&lt;empUserId&gt;" },
+  update: { maxOpen: 25 },
+  create: { userId: "&lt;empUserId&gt;", maxOpen: 25, used: 0 },
+});</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Webhook intake -->
+      <section id="webhook">
+        <h2 class="text-2xl font-bold text-white mb-1">Intake endpoint (creates/links leads)</h2>
+        <p class="text-gray-400 text-sm mb-6">HMAC secured. No JWT.</p>
+
+        <div class="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/leads/webhook</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">HMAC</span>
+          </div>
+          <div class="px-6 py-5 space-y-4 text-sm text-gray-300">
+            <p>Required headers:</p>
+            <pre class="bg-gray-950 rounded-lg p-4 text-xs text-yellow-200">Content-Type: application/json
+x-lead-source: google_forms | website | facebook | ...
+x-signature: sha256=&lt;hmac_hex_of_body&gt;
+x-idempotency-key: &lt;optional&gt;</pre>
+            <p>Canonical body shape:</p>
+            <pre class="bg-gray-950 rounded-lg p-4 text-xs text-yellow-200">{
+  "provider": "google_forms",
+  "externalId": "GF-001",
+  "name": "Ravi Kumar",
+  "email": "ravi@example.com",
+  "phone": "+919876543210",
+  "source": "google_forms",
+  "payload": { /* full raw source payload */ }
+}</pre>
+            <p>Responses:</p>
+            <pre class="bg-gray-950 rounded-lg p-4 text-xs text-green-300">201 { "ok": true, "note": "created", "leadId": "...", "webhookEventId": "..." }
+200 { "ok": true, "note": "linked",  "leadId": "...", "webhookEventId": "..." }</pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="dedupe">
+        <h2 class="text-2xl font-bold text-white mb-4">Deduplication rules</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-sm text-gray-300 space-y-2">
+          <ul class="list-disc list-inside space-y-1">
+            <li>Backend computes <strong class="text-white">dedupeHash</strong> from <code>phone</code>, <code>email</code>, <code>source</code>, <code>externalId</code>.</li>
+            <li>Lookup order: first by <code>externalId</code>, then by <code>dedupeHash</code>.</li>
+            <li>Every request creates a <code>LeadWebhookEvent</code> (audit trail), even if it links to an existing lead.</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Assignment engine -->
+      <section id="sourcepool">
+        <h2 class="text-2xl font-bold text-white mb-4">Source → Team routing (SourcePool)</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-sm text-gray-300 space-y-3">
+          <p>
+            If you want different sources to go to different teams, configure a <code>SourcePool</code> record:
+            <code>source</code> → <code>teamId</code>.
+          </p>
+          <p class="text-gray-400">
+            Example: <code>source = google_forms</code> routes to Team A; <code>source = facebook</code> routes to Team B.
+          </p>
+        </div>
+      </section>
+
+      <section id="roundrobin">
+        <h2 class="text-2xl font-bold text-white mb-4">Round-robin assignment logic</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-sm text-gray-300 space-y-4">
+          <p>
+            Assignment uses a Redis pointer per team (or global), which is incremented to select the next member.
+            Team members are considered in join-order and rotated.
+          </p>
+          <pre class="bg-gray-950 rounded-lg p-4 text-xs text-gray-300">Inputs:
+  - lead.source (optional, for team routing)
+  - team members (TeamMember rows)
+  - redis pointer (lead:rr:team:&lt;teamId&gt;)
+
+Output:
+  - chosen userId (agent)
+
+Pseudo:
+  members = teamMembers ordered by joinedAt asc
+  idx = pointer % members.length
+  candidate = members[idx]
+  pointer++</pre>
+        </div>
+      </section>
+
+      <section id="capacity">
+        <h2 class="text-2xl font-bold text-white mb-4">Capacity (UserCapacity)</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-sm text-gray-300 space-y-3">
+          <p>
+            Each agent has a capacity row: <code>UserCapacity</code> with <code>maxOpen</code> and <code>used</code>.
+            Auto-assignment only claims a user if <code>used &lt; maxOpen</code>.
+          </p>
+          <ul class="list-disc list-inside space-y-1">
+            <li>If candidate is at capacity, worker tries the next round-robin candidate.</li>
+            <li>When a lead reaches terminal status (WON/LOST/UNQUALIFIED), capacity is released (used--).</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="escalation">
+        <h2 class="text-2xl font-bold text-white mb-4">Escalation</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-sm text-gray-300 space-y-4">
+          <p>
+            If no eligible agent can be found after retries/attempts, the lead is escalated and becomes visible
+            to managers for manual intervention.
+          </p>
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+              <code class="text-white font-mono text-sm">/api/leads/assignment/admin/escalated</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + lead.escalation</span>
+            </div>
+            <pre class="text-xs text-yellow-200">GET /api/leads/assignment/admin/escalated?page=1&limit=50
+Authorization: Bearer &lt;token&gt;</pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="manual">
+        <h2 class="text-2xl font-bold text-white mb-4">Manual assignment (manager override)</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-sm text-gray-300 space-y-4">
+          <p>Managers can assign any lead to a specific user.</p>
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+              <code class="text-white font-mono text-sm">/api/leads/assignment/:id</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + lead.assign</span>
+            </div>
+            <pre class="text-xs text-yellow-200">POST /api/leads/assignment/&lt;leadId&gt;
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{ "userId": "&lt;assigneeUserId&gt;" }</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Follow-ups -->
+      <section id="followups">
+        <h2 class="text-2xl font-bold text-white mb-4">Follow-ups (agent workflow)</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-sm text-gray-300 space-y-4">
+          <p>Create a follow-up note / task:</p>
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+              <code class="text-white font-mono text-sm">/api/leads/followup/:id/followups</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + lead.write</span>
+            </div>
+            <pre class="text-xs text-yellow-200">POST /api/leads/followup/&lt;leadId&gt;/followups
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{
+  "dueAt": "2026-03-17T10:00:00.000Z",
+  "note": "Call customer",
+  "disposition": "Interested",
+  "rating": 4,
+  "status": "pending"
+}</pre>
+          </div>
+
+          <p>List follow-ups for a lead:</p>
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+              <code class="text-white font-mono text-sm">/api/leads/followup/:id/followups</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + lead.read</span>
+            </div>
+            <pre class="text-xs text-yellow-200">GET /api/leads/followup/&lt;leadId&gt;/followups?page=1&limit=50
+Authorization: Bearer &lt;token&gt;</pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="status">
+        <h2 class="text-2xl font-bold text-white mb-4">Status/Stage updates</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-sm text-gray-300 space-y-4">
+          <p>
+            Updating status/stage also creates an internal follow-up note and may release capacity on terminal status.
+          </p>
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="badge-patch text-xs font-bold px-3 py-1 rounded-full font-mono">PATCH</span>
+              <code class="text-white font-mono text-sm">/api/leads/followup/:id/status</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + lead.write</span>
+            </div>
+            <pre class="text-xs text-yellow-200">PATCH /api/leads/followup/&lt;leadId&gt;/status
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{
+  "status": "WON",
+  "stage": "CLOSED",
+  "priority": "HIGH",
+  "note": "Converted",
+  "rating": 5
+}</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- View leads -->
+      <section id="view">
+        <h2 class="text-2xl font-bold text-white mb-4">Frontend API: View leads</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-sm text-gray-300 space-y-4">
+          <p>These endpoints power the Leads list + Lead detail screens in frontend.</p>
+
+          <div class="bg-emerald-950 border border-emerald-800 rounded-lg p-4 text-emerald-100">
+            <p class="font-semibold mb-2">New: Frontend/Admin can manage Source → Team mapping</p>
+            <ul class="list-disc list-inside space-y-1">
+              <li>New sources (e.g. <code>facebook</code>, <code>google_ads</code>, <code>website</code>) should be mapped to a team via API.</li>
+              <li>This avoids Prisma/seed changes every time a new lead source is added.</li>
+              <li>Protected by: <code>JWT + lead.assign</code> permission.</li>
+            </ul>
+          </div>
+
+          <div class="bg-indigo-950 border border-indigo-800 rounded-lg p-4 text-indigo-100">
+            <p class="font-semibold mb-2">Frontend “who is this lead assigned to?”</p>
+            <ul class="list-disc list-inside space-y-1">
+              <li><code>GET /api/leads</code> gives <code>assignedToId</code>.</li>
+              <li>Use <code>GET /api/users</code> (or <code>/api/users/:id</code>) to map <code>assignedToId → user.name</code>.</li>
+              <li>Lead detail page can call <code>GET /api/leads/:id</code> to show full assignment history (<code>assignments[]</code>).</li>
+            </ul>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Step 0) Login (get token)</p>
+            <pre class="text-xs text-yellow-200">POST /api/auth/login
+Content-Type: application/json
+
+{ "email": "superadmin@example.com", "password": "SuperSecurePassword123!" }</pre>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+              <code class="text-white font-mono text-sm">/api/leads/source-pools</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + lead.assign</span>
+            </div>
+            <pre class="text-xs text-yellow-200">GET /api/leads/source-pools?active=true
+Authorization: Bearer &lt;token&gt;</pre>
+            <p class="text-gray-400 text-xs mt-2">
+              Use this in an Admin screen: show <code>source → team</code> mapping table.
+            </p>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+              <code class="text-white font-mono text-sm">/api/leads/source-pools/unmapped-sources</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + lead.assign</span>
+            </div>
+            <pre class="text-xs text-yellow-200">GET /api/leads/source-pools/unmapped-sources
+Authorization: Bearer &lt;token&gt;</pre>
+            <p class="text-gray-400 text-xs mt-2">
+              Frontend can show a “New sources need mapping” list.
+            </p>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+              <code class="text-white font-mono text-sm">/api/leads/source-pools</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + lead.assign</span>
+            </div>
+            <pre class="text-xs text-yellow-200">POST /api/leads/source-pools
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{
+  "source": "google_forms",
+  "teamId": "&lt;teamId&gt;",
+  "strategy": "round_robin",
+  "active": true
+}</pre>
+            <p class="text-gray-400 text-xs mt-2">This is an <strong>upsert</strong>: same source again will update.</p>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="badge-patch text-xs font-bold px-3 py-1 rounded-full font-mono">PATCH</span>
+              <code class="text-white font-mono text-sm">/api/leads/source-pools/:source</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + lead.assign</span>
+            </div>
+            <pre class="text-xs text-yellow-200">PATCH /api/leads/source-pools/google_forms
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{ "teamId": "&lt;newTeamId&gt;", "active": true }</pre>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="badge-del text-xs font-bold px-3 py-1 rounded-full font-mono">DELETE</span>
+              <code class="text-white font-mono text-sm">/api/leads/source-pools/:source</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + lead.assign</span>
+            </div>
+            <pre class="text-xs text-yellow-200">DELETE /api/leads/source-pools/google_forms
+Authorization: Bearer &lt;token&gt;</pre>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+              <code class="text-white font-mono text-sm">/api/leads</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + lead.read</span>
+            </div>
+            <pre class="text-xs text-yellow-200">GET /api/leads?page=1&limit=50&source=google_forms&status=NEW&q=ravi
+Authorization: Bearer &lt;token&gt;</pre>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+              <code class="text-white font-mono text-sm">/api/leads/:id</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + lead.read</span>
+            </div>
+            <pre class="text-xs text-yellow-200">GET /api/leads/&lt;leadId&gt;
+Authorization: Bearer &lt;token&gt;</pre>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+              <code class="text-white font-mono text-sm">/api/users</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + user.read</span>
+            </div>
+            <pre class="text-xs text-yellow-200">GET /api/users
+Authorization: Bearer &lt;token&gt;</pre>
+            <p class="text-gray-400 text-xs mt-2">
+              Frontend: build a map <code>{ userId: name }</code> and display assignee names in the leads table.
+            </p>
+          </div>
+
+          <div class="bg-gray-900 border border-gray-800 rounded-lg p-4">
+            <p class="font-semibold text-gray-100 mb-2">Recommended UI screens</p>
+            <ul class="list-disc list-inside space-y-1 text-gray-300">
+              <li><strong class="text-white">Leads list</strong>: columns = Name, Phone, Source, Status, Assigned Agent, Assigned At.</li>
+              <li><strong class="text-white">Lead detail</strong>: show assignments history, webhook payload summary, follow-ups, stage history.</li>
+              <li><strong class="text-white">Manager tools</strong> (optional): manual assign and escalated leads list.</li>
+              <li><strong class="text-white">Admin: Source mapping</strong>: table of <code>source → team</code> with “Add / Edit / Disable / Delete”.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Endpoint summary -->
+      <section id="endpoint-summary">
+        <h2 class="text-2xl font-bold text-white mb-6">Endpoint summary</h2>
+        <div class="overflow-x-auto bg-gray-900 border border-gray-800 rounded-xl">
+          <table class="text-sm w-full">
+            <thead>
+              <tr class="text-gray-500 border-b border-gray-700 text-left bg-gray-950">
+                <th class="py-3 px-4">Method</th>
+                <th class="py-3 px-4">Path</th>
+                <th class="py-3 px-4">Auth</th>
+                <th class="py-3 px-4">Purpose</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800">
+              <tr><td class="py-2 px-4"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 px-4 font-mono text-indigo-300">/api/leads/webhook</td><td class="py-2 px-4 text-gray-300">HMAC</td><td class="py-2 px-4 text-gray-300">Create/link lead from external source</td></tr>
+              <tr><td class="py-2 px-4"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 px-4 font-mono text-indigo-300">/api/users</td><td class="py-2 px-4 text-gray-300">JWT + user.read</td><td class="py-2 px-4 text-gray-300">List users (map assignedToId → name)</td></tr>
+              <tr><td class="py-2 px-4"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 px-4 font-mono text-indigo-300">/api/leads</td><td class="py-2 px-4 text-gray-300">JWT + lead.read</td><td class="py-2 px-4 text-gray-300">List leads (filters + pagination)</td></tr>
+              <tr><td class="py-2 px-4"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 px-4 font-mono text-indigo-300">/api/leads/:id</td><td class="py-2 px-4 text-gray-300">JWT + lead.read</td><td class="py-2 px-4 text-gray-300">Lead detail</td></tr>
+              <tr><td class="py-2 px-4"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 px-4 font-mono text-indigo-300">/api/leads/assignment/:id</td><td class="py-2 px-4 text-gray-300">JWT + lead.assign</td><td class="py-2 px-4 text-gray-300">Manual assignment override</td></tr>
+              <tr><td class="py-2 px-4"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 px-4 font-mono text-indigo-300">/api/leads/assignment/admin/escalated</td><td class="py-2 px-4 text-gray-300">JWT + lead.escalation</td><td class="py-2 px-4 text-gray-300">List escalated leads</td></tr>
+              <tr><td class="py-2 px-4"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 px-4 font-mono text-indigo-300">/api/leads/followup/:id/followups</td><td class="py-2 px-4 text-gray-300">JWT + lead.write</td><td class="py-2 px-4 text-gray-300">Create follow-up</td></tr>
+              <tr><td class="py-2 px-4"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 px-4 font-mono text-indigo-300">/api/leads/followup/:id/followups</td><td class="py-2 px-4 text-gray-300">JWT + lead.read</td><td class="py-2 px-4 text-gray-300">List follow-ups</td></tr>
+              <tr><td class="py-2 px-4"><span class="badge-patch text-xs font-mono font-bold px-2 py-0.5 rounded">PATCH</span></td><td class="py-2 px-4 font-mono text-indigo-300">/api/leads/followup/:id/status</td><td class="py-2 px-4 text-gray-300">JWT + lead.write</td><td class="py-2 px-4 text-gray-300">Update status/stage/priority</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="testing">
+        <h2 class="text-2xl font-bold text-white mb-4">Testing checklist (does lead receiving work?)</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-4 text-sm text-gray-300">
+          <ol class="list-decimal list-inside space-y-2">
+            <li>
+              <strong class="text-white">Webhook call succeeds</strong>:
+              <ul class="list-disc list-inside ml-5 mt-1 space-y-1">
+                <li>Send <code>POST /api/leads/webhook</code> with correct HMAC headers.</li>
+                <li>Expect <code>201 created</code> or <code>200 linked</code>.</li>
+              </ul>
+            </li>
+            <li>
+              <strong class="text-white">Lead appears in list</strong>:
+              <ul class="list-disc list-inside ml-5 mt-1 space-y-1">
+                <li>Login and call <code>GET /api/leads</code> with JWT token.</li>
+                <li>Confirm the lead shows with the correct <code>source</code>, <code>name</code>, <code>phone</code>.</li>
+              </ul>
+            </li>
+            <li>
+              <strong class="text-white">Assignment happens</strong>:
+              <ul class="list-disc list-inside ml-5 mt-1 space-y-1">
+                <li>Wait for worker to assign, then re-fetch lead detail <code>GET /api/leads/:id</code>.</li>
+                <li>Confirm <code>assignedToId</code> is set and capacity <code>used</code> increased for that user.</li>
+              </ul>
+            </li>
+            <li>
+              <strong class="text-white">Follow-up workflow works</strong>:
+              <ul class="list-disc list-inside ml-5 mt-1 space-y-1">
+                <li>Create follow-up: <code>POST /api/leads/followup/:id/followups</code></li>
+                <li>List follow-ups: <code>GET /api/leads/followup/:id/followups</code></li>
+              </ul>
+            </li>
+            <li>
+              <strong class="text-white">Terminal status releases capacity</strong>:
+              <ul class="list-disc list-inside ml-5 mt-1 space-y-1">
+                <li>Set status to <code>WON</code> or <code>LOST</code> using <code>PATCH /api/leads/followup/:id/status</code>.</li>
+                <li>Confirm capacity <code>used</code> decreases for the assignee.</li>
+              </ul>
+            </li>
+          </ol>
+        </div>
+      </section>
+    </div>
+
+    <div class="border-t border-gray-800 px-6 md:px-12 py-6 mt-12 text-sm text-gray-500 flex items-center justify-between">
+      <span>CRM Backend · Leads Round Robin Flow</span>
+      <span>Generated Mar 2026</span>
+    </div>
+  </main>
+
+</body>
+</html>
+

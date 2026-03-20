@@ -1,0 +1,867 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// ---------- enums ----------
+enum ActionType {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+}
+
+enum TeamMemberRole {
+  MEMBER
+  ASSISTANT_LEAD
+  LEAD
+}
+
+enum AttendanceStatus {
+  PENDING
+  ACCEPTED
+  CONFIRMED
+  FINALIZED
+  REJECTED
+}
+
+enum LocationRequestStatus {
+  PENDING
+  FULFILLED
+  DENIED
+  EXPIRED
+}
+
+enum ConsentType {
+  LOCATION
+  PHOTO
+  TERMS
+}
+
+/// ---------- end enums ----------
+
+/// ---------- core user / auth / rbac models ----------
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  phone        String?
+  passwordHash String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  version      Int      @default(1)
+
+  // Relations
+  roles                  UserRole[]
+  auditLogs              AuditLog[]
+  refreshTokens          RefreshToken[]
+  teamMembers            TeamMember[] // user's memberships across teams (multi-team)
+  devices                Device[] // registered devices for push/identification
+  consents               Consent[] // recorded consents
+  attendances            Attendance[] // attendance rows for the user
+  locationLogs           LocationLog[] // historical logged locations (attendance + optionally others)
+  locationRequestsSent   LocationRequest[] @relation("requester") // requests created by user
+  locationRequestsTarget LocationRequest[] @relation("target") // requests targeted at user
+  ledTeams               Team[]            @relation("teamLead") // teams where this user is lead (denormalized link)
+  // Assignment capacity (optional one-to-one)
+  capacity UserCapacity?
+  // --- Added missing Cold Call relations ---
+  coldCallBatches          ColdCallBatch[]          @relation("ColdCallBatch_uploadedBy")
+  coldCallLockEntries      ColdCallEntry[]          @relation("ColdCallLockUser")
+  coldCallAttempts         ColdCallAttempt[]
+  ccah_from                ColdCallAssignmentHistory[] @relation("ccah_from")
+  ccah_to                  ColdCallAssignmentHistory[] @relation("ccah_to")
+  ccah_actor               ColdCallAssignmentHistory[] @relation("ccah_actor")
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  users       UserRole[]
+  permissions RolePermission[]
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  description String?
+  module      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  roles RolePermission[]
+}
+
+model UserRole {
+  userId     String
+  roleId     String
+  assignedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  assignedAt   DateTime @default(now())
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+/// ---------- end rbac ----------
+
+/// ---------- team models ----------
+model Team {
+  id         String   @id @default(cuid())
+  name       String
+  teamLeadId String?  // optional reference to a user who is the lead (denormalized)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  members          TeamMember[]        // TeamMember join table
+  teamLead         User?               @relation("teamLead", fields: [teamLeadId], references: [id])
+  leads            Lead[]              // backlink for assignedTeam relation
+  sourcePools      SourcePool[]        @relation("TeamSourcePools")
+  coldCallEntries  ColdCallEntry[]     
+  coldCallQuotas   ColdCallQuota[]     // new relation to ColdCallQuota
+
+  @@index([teamLeadId])
+}
+
+model TeamMember {
+  id        String         @id @default(cuid())
+  userId    String
+  teamId    String
+  role      TeamMemberRole @default(MEMBER)
+  joinedAt  DateTime       @default(now())
+  meta      Json? // e.g., { assignedBy: "...", note: "..." }
+  createdAt DateTime       @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, teamId])
+  @@index([teamId])
+  @@index([userId])
+}
+
+model TeamRequest {
+  id           String    @id @default(cuid())
+  type         String // "assign" | "remove" | "transfer" | "join"
+  requesterId  String
+  targetUserId String
+  fromTeamId   String? // for transfer/remove
+  toTeamId     String? // for transfer/assign/join
+  status       String    @default("pending") // pending | approved | rejected
+  note         String?
+  createdAt    DateTime  @default(now())
+  respondedBy  String?
+  respondedAt  DateTime?
+}
+
+/// ---------- end team models ----------
+
+/// ---------- audit & tokens ----------
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  roleName   String?
+  action     String
+  resource   String
+  resourceId String?
+  payload    Json?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  tokenHash String
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  revoked   Boolean  @default(false)
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+/// ---------- end audit & tokens ----------
+
+/// ---------- HR: attendance & location ----------
+model Attendance {
+  id         String           @id @default(cuid())
+  userId     String
+  teamId     String? // optional snapshot of team at checkin time
+  status     AttendanceStatus @default(ACCEPTED) // pending | accepted | confirmed | finalized | rejected
+  checkinAt  DateTime         @default(now())
+  checkoutAt DateTime?
+  photoRef   String? // selfie/photo reference (URL or storage key)
+  latitude   Float?
+  longitude  Float?
+  accuracy   Float? // meters
+  locationTs DateTime? // client-supplied location timestamp
+  note       String?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  // team  Team? @relation(fields: [teamId], references: [id])
+  @@index([userId, checkinAt])
+}
+
+model LocationLog {
+  id         String   @id @default(cuid())
+  userId     String
+  latitude   Float
+  longitude  Float
+  accuracy   Float?
+  recordedAt DateTime @default(now())
+  source     String? // "attendance" | "request_response"
+  note       String?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model LocationRequest {
+  id          String                @id @default(cuid())
+  requesterId String
+  targetId    String
+  status      LocationRequestStatus @default(PENDING) // pending | fulfilled | denied | expired
+  expiresAt   DateTime
+  createdAt   DateTime              @default(now())
+  fulfilledAt DateTime?
+  respondedBy String? // user id who responded (target)
+  note        String?
+
+  requester User @relation("requester", fields: [requesterId], references: [id])
+  target    User @relation("target", fields: [targetId], references: [id])
+}
+
+model LocationAccessAudit {
+  id        String   @id @default(cuid())
+  actorId   String? // who requested / who read / who responded
+  targetId  String // whose location was involved
+  action    String // request_created | request_responded | request_denied | request_expired | result_read
+  meta      Json? // for responses we store { latitude, longitude, accuracy, recordedAt }
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+}
+
+/// ---------- end HR models ----------
+
+/// ---------- devices & consent ----------
+model Device {
+  id         String    @id @default(cuid())
+  userId     String
+  platform   String? // "ios" | "android" | "web"
+  deviceId   String? // OS device id if available
+  pushToken  String? // FCM/APNs/WebPush token
+  lastSeenAt DateTime?
+  meta       Json?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Consent {
+  id        String      @id @default(cuid())
+  userId    String
+  type      ConsentType
+  grantedAt DateTime    @default(now())
+  revokedAt DateTime?
+  version   String?
+  meta      Json?
+  user      User        @relation(fields: [userId], references: [id])
+
+  @@index([userId, type])
+}
+
+/// ---------- end devices & consent ----------
+
+/// ---------- leads ----------
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  UNQUALIFIED
+  WON
+  LOST
+  UNASSIGNED_ESCALATED
+  ASSIGNED
+}
+
+enum LeadStage {
+  INBOUND
+  QUALIFICATION
+  DEMO
+  NEGOTIATION
+  CLOSED
+}
+
+enum LeadPriority {
+  LOW
+  NORMAL
+  HIGH
+}
+
+model Lead {
+  id             String       @id @default(cuid())
+  externalId     String? // provider-specific id (optional)
+  dedupeHash     String?      @db.VarChar(128) // deterministic hash of phone+email+externalId
+  source         String? // e.g., facebook_form, google_form, 99acres
+  name           String?
+  email          String?      @db.VarChar(255)
+  phone          String?      @db.VarChar(64)
+  payload        Json? // raw parsed payload or mapped fields
+  status         LeadStatus   @default(NEW)
+  stage          LeadStage    @default(INBOUND)
+  priority       LeadPriority @default(NORMAL)
+  assignedToId   String? // user id
+  assignedTeamId String? // optional assigned team (team pool)
+  assignedAt     DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // Relations
+  assignments   LeadAssignment[]
+  webhookEvents LeadWebhookEvent[]
+  notes         LeadNote[]
+  followUps     LeadFollowUp[]
+  assignedTeam  Team?              @relation(fields: [assignedTeamId], references: [id])
+  escalations   LeadEscalation[]
+  stageHistory  LeadStageHistory[]
+  reservations Reservation[] 
+  coldCallEntries ColdCallEntry[]
+
+  @@index([email])
+  @@index([phone])
+  @@index([dedupeHash])
+  @@index([assignedToId])
+  @@index([assignedTeamId])
+  @@index([createdAt])
+}
+
+model LeadWebhookEvent {
+  id         String   @id @default(cuid())
+  leadId     String? // link if matched
+  provider   String // e.g., facebook, google_forms, 99acres
+  externalId String? // provider event id
+  payload    Json
+  rawBody    String? // if needed
+  headers    Json?
+  dedupeHash String? // store computed dedupe hash used for decision
+  createdAt  DateTime @default(now())
+
+  lead Lead? @relation(fields: [leadId], references: [id])
+
+  @@index([externalId])
+  @@index([dedupeHash])
+}
+
+model LeadAssignment {
+  id         String   @id @default(cuid())
+  leadId     String
+  assignedTo String? // user id
+  assignedBy String? // user who assigned (system or user)
+  method     String // "auto" | "manual" | "escalation"
+  attempt    Int      @default(0) // increments on worker retries
+  meta       Json? // new optional metadata for strategy, job ids etc
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  lead        Lead             @relation(fields: [leadId], references: [id])
+  escalations LeadEscalation[]
+
+  @@index([assignedTo])
+  @@index([leadId])
+}
+
+model LeadNote {
+  id        String   @id @default(cuid())
+  leadId    String
+  authorId  String? // user id
+  text      String
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id])
+}
+
+// change existing LeadFollowUp model to:
+model LeadFollowUp {
+  id          String    @id @default(cuid())
+  leadId      String
+  assignedTo  String? // user id responsible for follow-up
+  dueAt       DateTime?
+  note        String?
+  disposition String? // reason for the call
+  rating      Int? // 0..5 numeric rating of the interaction
+  status      String // pending|done|skipped
+  meta        Json? // optional snapshot: { previousStatus, previousStage, previousPriority, actorId }
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  lead Lead @relation(fields: [leadId], references: [id])
+}
+
+model LeadStageHistory {
+  id        String     @id @default(cuid())
+  leadId    String
+  fromStage LeadStage?
+  toStage   LeadStage
+  changedBy String? // user id who changed stage
+  note      String?
+  createdAt DateTime   @default(now())
+
+  lead Lead @relation(fields: [leadId], references: [id])
+}
+
+/// represent the limit of leads a user can be assigned to
+model UserCapacity {
+  userId    String   @id
+  maxOpen   Int      @default(10)
+  used      Int      @default(0) // <= added: current claimed/active open leads
+  meta      Json?
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model SourcePool {
+  id        String   @id @default(cuid())
+  source    String   @unique
+  teamId    String?
+  strategy  String? // e.g., "round_robin", "capacity", "per_source"
+  meta      Json?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  team Team? @relation("TeamSourcePools", fields: [teamId], references: [id], onDelete: Cascade)
+}
+
+model LeadEscalation {
+  id            String   @id @default(cuid())
+  leadId        String
+  assignmentId  String?
+  status        String   @default("pending") // pending | notified | resolved
+  notifiedUsers Json? // e.g., array of userIds who were notified
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  lead       Lead            @relation(fields: [leadId], references: [id])
+  assignment LeadAssignment? @relation(fields: [assignmentId], references: [id])
+}
+
+/// ---------- end leads --------------
+
+// ---------------------------
+// INVENTORY MODULE (HYBRID)
+// ---------------------------
+
+model Project {
+  id          String       @id @default(cuid())
+  name        String
+  developer   String?
+  city        String?
+  locality    String?
+  address     String?
+  meta        Json?
+  active      Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  towers      Tower[]
+  listings    Listing[]
+  units       Unit[]        // optional: direct units not tied to towers
+}
+
+model Tower {
+  id         String    @id @default(cuid())
+  projectId  String
+  name       String?
+  floors     Int?
+  meta       Json?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id])
+  units   Unit[]
+}
+
+model Unit {
+  id            String     @id @default(cuid())
+  projectId     String
+  towerId       String?
+  floor         Int?
+  unitNumber    String?
+  sizeSqFt      Float?
+  bedrooms      Int?
+  bathrooms     Int?
+  facing        String?
+  price         BigInt?
+  status        UnitStatus @default(AVAILABLE)
+  meta          Json?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id])
+  tower   Tower?  @relation(fields: [towerId], references: [id])
+
+  images        UnitImage[]
+  reservations  Reservation[]
+  listings      Listing[] 
+}
+
+enum UnitStatus {
+  AVAILABLE
+  BLOCKED
+  BOOKED
+  SOLD
+}
+
+model UnitImage {
+  id        String   @id @default(cuid())
+  unitId    String
+  url       String
+  alt       String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  unit Unit @relation(fields: [unitId], references: [id])
+}
+
+model Listing {
+  id            String         @id @default(cuid())
+  title         String
+  type          ListingType
+  ownerName     String?
+  ownerPhone    String?
+  ownerEmail    String?
+  projectId     String?
+  unitId        String?
+  city          String?
+  locality      String?
+  price         BigInt?
+  bedrooms      Int?
+  bathrooms     Int?
+  sqft          Float?
+  status        ListingStatus @default(AVAILABLE)
+  meta          Json?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  images  ListingImage[]
+  project Project?    @relation(fields: [projectId], references: [id])
+  unit    Unit?       @relation(fields: [unitId], references: [id])
+  reservations Reservation[]
+}
+
+enum ListingType {
+  SALE
+  RENT
+  BOTH
+}
+
+enum ListingStatus {
+  AVAILABLE
+  UNDER_OFFER
+  CLOSED
+}
+
+model ListingImage {
+  id        String   @id @default(cuid())
+  listingId String
+  url       String
+  alt       String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  listing Listing @relation(fields: [listingId], references: [id])
+}
+
+model Reservation {
+  id            String           @id @default(cuid())
+  leadId        String?
+  unitId        String?
+  listingId     String?
+  userId        String?
+  status        ReservationStatus @default(ACTIVE)
+  expiresAt     DateTime
+  reservedAt    DateTime          @default(now())
+  confirmedAt   DateTime?
+  cancelledAt   DateTime?
+  note          String?
+  meta          Json?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  lead    Lead?     @relation(fields: [leadId], references: [id])
+  unit    Unit?     @relation(fields: [unitId], references: [id])
+  listing Listing?  @relation(fields: [listingId], references: [id])
+  reservationTTLJob ReservationTTLJob? @relation("ReservationToTTLJob")
+}
+
+enum ReservationStatus {
+  ACTIVE
+  EXPIRED
+  CONFIRMED
+  CANCELLED
+}
+
+model ReservationTTLJob {
+  id            String   @id @default(cuid())
+  reservationId String   @unique
+  jobId         String
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime?
+
+  reservation Reservation @relation("ReservationToTTLJob", fields: [reservationId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+}
+
+model InventoryAudit {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  resource   String
+  resourceId String?
+  meta       Json?
+  createdAt  DateTime @default(now())
+}
+
+// Cold Calls
+// enums
+enum ColdCallBatchMode {
+  manual
+  decorator
+}
+
+enum ColdCallDedupePolicy {
+  keep
+  skip
+}
+
+enum ColdCallEntryStatus {
+  pending
+  in_progress
+  done
+  skipped_duplicate
+}
+
+enum ColdCallResponse {
+  interested
+  not_interested
+  follow_up_required
+}
+
+enum ColdCallDisposition {
+  busy
+  wrong_number
+  no_answer
+  interested
+  not_interested
+  callback
+  other
+}
+
+enum ColdCallAttemptResult {
+  no_answer
+  busy
+  wrong_number
+  interested
+  not_interested
+  callback
+  other
+}
+
+enum ColdCallRoutingKind {
+  location
+  budget
+  default_
+}
+
+/// Cold Call Batch / Entry / Attempts for pull-queue model
+
+model ColdCallBatch {
+  id             String   @id @default(cuid())
+  uploadedById   String?
+  originalName   String?   // filename reference
+  mode           ColdCallBatchMode    @default(manual) // "manual" | "decorator"
+  routingConfig  Json?     // ordered decorators + config
+  dedupePolicy   ColdCallDedupePolicy @default(keep)   // "keep" | "skip"
+  teamConfig     Json?     // for manual mode
+
+  totalCount     Int       @default(0)
+  createdCount   Int       @default(0)
+  duplicateCount Int       @default(0)
+  skippedCount   Int       @default(0)
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  uploadedBy User? @relation("ColdCallBatch_uploadedBy", fields: [uploadedById], references: [id])
+  entries    ColdCallEntry[]
+
+  @@index([uploadedById])
+  @@index([createdAt])
+}
+
+model ColdCallEntry {
+  id             String   @id @default(cuid())
+  batchId        String
+  rowIndex       Int?      // original Excel row
+  phone          String?   @db.VarChar(64)
+  email          String?   @db.VarChar(255)
+  name           String?
+  payload        Json?     // raw row data
+
+  dedupeHash     String?   @db.VarChar(128)
+
+  // Team-level routing info (computed at upload or precompute)
+  assignedTeamId String?   // team chosen by routing (nullable)
+  // Locking for pull-queue
+  lockUserId     String?   // user who locked it for calling
+  lockExpiresAt  DateTime? // lock expiration timestamp
+
+  // assignment result (after agent logs)
+  status         ColdCallEntryStatus @default(pending) // pending | in_progress | done | skipped_duplicate
+  response       ColdCallResponse?   // interested | not_interested | follow_up_required
+  disposition    ColdCallDisposition?  // standardized dispositions
+  summary        String?
+  priority       Int      @default(0) // optional ordering field
+
+  leadId         String?  // linked Lead if converted
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  batch         ColdCallBatch @relation(fields: [batchId], references: [id])
+  lockUser      User?         @relation("ColdCallLockUser", fields: [lockUserId], references: [id])
+  assignedTeam  Team?         @relation(fields: [assignedTeamId], references: [id])
+  lead          Lead?         @relation(fields: [leadId], references: [id])
+
+  attempts ColdCallAttempt[]    // history of call attempts
+  history  ColdCallAssignmentHistory[]
+
+  @@index([batchId])
+  @@index([phone])
+  @@index([dedupeHash])
+  @@index([status])
+  @@index([lockUserId])
+  @@index([lockExpiresAt])
+  @@index([createdAt])
+  @@index([priority, createdAt])
+}
+
+model ColdCallAttempt {
+  id          String   @id @default(cuid())
+  entryId     String
+  attemptNo   Int      @default(1)
+  userId      String?  // who attempted
+  startedAt   DateTime @default(now())
+  endedAt     DateTime?
+  result      ColdCallAttemptResult? // disposition short e.g., "no_answer"
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  entry ColdCallEntry @relation(fields: [entryId], references: [id])
+  user  User?         @relation(fields: [userId], references: [id])
+
+  @@index([entryId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model ColdCallAssignmentHistory {
+  id          String   @id @default(cuid())
+  entryId     String
+  fromUserId  String?
+  toUserId    String?
+  reason      String?
+  meta        Json?
+  actorId     String?
+  createdAt   DateTime @default(now())
+
+  entry ColdCallEntry @relation(fields: [entryId], references: [id])
+
+  fromUser User? @relation("ccah_from", fields: [fromUserId], references: [id])
+  toUser   User? @relation("ccah_to",   fields: [toUserId],   references: [id])
+  actor    User? @relation("ccah_actor", fields: [actorId],   references: [id])
+
+  @@index([entryId])
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([createdAt])
+}
+
+model ColdCallRoutingRule {
+  id         String   @id @default(cuid())
+  name       String
+  kind       ColdCallRoutingKind  // "location" | "budget" | "default"
+  config     Json?
+  active     Boolean  @default(true)
+  order      Int      @default(0)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// --- Cold Call analytics & quotas  ---
+
+model ColdCallQuota {
+  id        String   @id @default(cuid())
+  teamId    String
+  period    String   // 'daily' | 'weekly' | 'monthly'
+  target    Int      // number of planned attempts / conversions depending on metric
+  metric    String   // 'attempts' | 'conversions' | 'connects'
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  team Team @relation(fields: [teamId], references: [id])
+
+  @@index([teamId, period])
+  @@unique([teamId, period, metric])
+}
+
+model ColdCallAggregate {
+  id          String   @id @default(cuid())
+  key         String   @unique // e.g., "agent:USERID:2025-12-12"
+  kind        String   // 'agent' | 'team'
+  entityId    String   // userId or teamId
+  date        DateTime // date bucket (UTC midnight)
+  attempts    Int      @default(0)
+  connects    Int      @default(0)
+  conversions Int      @default(0)
+  meta        Json?
+  createdAt   DateTime @default(now())
+
+  @@index([kind, entityId, date])
+}

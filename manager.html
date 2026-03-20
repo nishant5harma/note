@@ -1,0 +1,1428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRM API — Manager &amp; Team Management Reference</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { DEFAULT: '#6366f1', dark: '#4f46e5', light: '#a5b4fc' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    html { scroll-behavior: smooth; }
+    pre { white-space: pre-wrap; word-break: break-all; }
+    .badge-get    { background:#d1fae5; color:#065f46; border:1px solid #6ee7b7; }
+    .badge-post   { background:#dbeafe; color:#1e40af; border:1px solid #93c5fd; }
+    .badge-put    { background:#fef3c7; color:#92400e; border:1px solid #fcd34d; }
+    .badge-patch  { background:#ede9fe; color:#5b21b6; border:1px solid #c4b5fd; }
+    .badge-delete { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
+  </style>
+</head>
+<body class="bg-gray-950 text-gray-200 font-sans antialiased">
+
+  <!-- ─── Sidebar ─────────────────────────────────────────────────── -->
+  <aside class="fixed top-0 left-0 h-full w-64 bg-gray-900 border-r border-gray-800 overflow-y-auto z-30 hidden lg:flex flex-col">
+    <div class="px-6 py-5 border-b border-gray-800">
+      <span class="text-xs font-semibold tracking-widest text-indigo-400 uppercase">CRM Backend</span>
+      <h1 class="text-lg font-bold text-white mt-1">Manager &amp; Teams API</h1>
+    </div>
+    <nav class="flex-1 px-4 py-4 space-y-1 text-sm">
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-2 pb-1">Overview</p>
+      <a href="#overview"      class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Manager Role Concept</a>
+      <a href="#permissions"   class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Permissions Reference</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Teams</p>
+      <a href="#team-create"   class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Create Team</a>
+      <a href="#team-list"     class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">List Teams</a>
+      <a href="#team-get"      class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Get Team</a>
+      <a href="#team-update"   class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Update Team</a>
+      <a href="#team-delete"   class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Delete Team</a>
+      <a href="#team-assign-lead" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Assign Team Lead</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Team Members</p>
+      <a href="#member-list"        class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">List Members</a>
+      <a href="#member-assign"      class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Assign Member(s)</a>
+      <a href="#member-bulk-assign" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Bulk Assign Members</a>
+      <a href="#member-remove"      class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Remove Member</a>
+      <a href="#member-bulk-remove" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Bulk Remove Members</a>
+      <a href="#team-users"         class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">List Team Users</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Team Requests</p>
+      <a href="#req-transfer"  class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Create Transfer Request</a>
+      <a href="#req-join"      class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Create Join Request</a>
+      <a href="#req-list"      class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">List Requests</a>
+      <a href="#req-respond"   class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Approve / Reject Request</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Users &amp; Assignment</p>
+      <a href="#user-create"   class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Create User (with Team)</a>
+      <a href="#user-list"     class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">List Users</a>
+      <a href="#user-get"      class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Get User</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">HR — Attendance</p>
+      <a href="#att-checkin"   class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Check In</a>
+      <a href="#att-checkout"  class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Check Out</a>
+      <a href="#att-list"      class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">List Attendance</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">HR — Location</p>
+      <a href="#loc-request"   class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Request Location</a>
+      <a href="#loc-respond"   class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Respond to Request</a>
+      <a href="#loc-result"    class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Get Location Result</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">HR — Devices &amp; Consent</p>
+      <a href="#device-register"   class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Register Device</a>
+      <a href="#device-unregister" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Unregister Device</a>
+      <a href="#device-list"       class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">List Devices</a>
+      <a href="#consent-grant"     class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Grant Consent</a>
+      <a href="#consent-revoke"    class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Revoke Consent</a>
+      <a href="#consent-list"      class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">List Consent</a>
+
+      <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 pt-4 pb-1">Reference</p>
+      <a href="#enums"   class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">Enums &amp; Statuses</a>
+      <a href="#summary" class="block px-3 py-2 rounded-lg hover:bg-gray-800 text-gray-300 hover:text-white transition">All Endpoints Summary</a>
+    </nav>
+    <div class="px-6 py-4 border-t border-gray-800 text-xs text-gray-500">
+      Base URL: <span class="text-indigo-400 font-mono">/api</span>
+    </div>
+  </aside>
+
+  <!-- ─── Main ──────────────────────────────────────────────────────── -->
+  <main class="lg:ml-64 min-h-screen">
+
+    <!-- Hero -->
+    <div class="bg-gradient-to-br from-gray-900 via-violet-950 to-gray-900 border-b border-gray-800 px-6 md:px-12 py-12">
+      <div class="max-w-4xl">
+        <span class="inline-block text-xs font-semibold tracking-widest text-violet-400 uppercase mb-3">CRM Backend · Manager Role</span>
+        <h1 class="text-3xl md:text-4xl font-extrabold text-white mb-4">Manager &amp; Team Management API</h1>
+        <p class="text-gray-400 text-base md:text-lg leading-relaxed mb-6">
+          Complete reference for all Team and HR endpoints. A manager is any user whose RBAC role carries
+          the <code class="text-violet-300 bg-gray-800 px-1.5 py-0.5 rounded text-sm">team.write</code> permission.
+          Managers can own and operate multiple teams simultaneously.
+        </p>
+        <div class="flex flex-wrap gap-3 text-sm">
+          <span class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-gray-300">
+            Base&nbsp;<span class="text-indigo-400 font-mono font-semibold">/api</span>
+          </span>
+          <span class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-gray-300">
+            Auth&nbsp;<span class="text-amber-400 font-mono">Bearer &lt;token&gt;</span>
+          </span>
+          <span class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-gray-300">
+            Teams · Members · Requests · HR
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="px-6 md:px-12 py-10 max-w-5xl space-y-20">
+
+      <!-- ══════════════════════════════════════════
+           OVERVIEW
+      ══════════════════════════════════════════ -->
+      <section id="overview">
+        <h2 class="text-2xl font-bold text-white mb-6">Manager Role Concept</h2>
+
+        <div class="bg-violet-950 border border-violet-800 rounded-xl p-6 mb-6">
+          <h3 class="text-violet-300 font-bold text-base mb-3">What is a "Manager"?</h3>
+          <p class="text-gray-300 text-sm leading-relaxed mb-4">
+            There is no separate <em>Manager</em> database model. A manager is simply a <strong class="text-white">CRM User</strong>
+            whose assigned RBAC role carries the <code class="text-violet-300">team.write</code> permission.
+            This gives them full authority to create teams, add/remove members, approve requests, and track attendance.
+          </p>
+          <p class="text-gray-300 text-sm leading-relaxed">
+            A single manager can oversee <strong class="text-white">multiple teams</strong> at the same time.
+            Each team can have its own <strong class="text-white">Team Lead</strong> — a member promoted to the
+            <code class="text-amber-300">LEAD</code> role within that team — who handles day-to-day requests
+            that then flow back to the manager for approval.
+          </p>
+        </div>
+
+        <!-- Architecture diagram (text-based) -->
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6">
+          <h3 class="text-white font-semibold mb-4">Hierarchy</h3>
+          <pre class="text-sm text-gray-300 leading-relaxed">
+  ┌──────────────────────────────────────────────┐
+  │               MANAGER (User)                 │
+  │         role with  team.write perm           │
+  │                                              │
+  │   ┌───────────────┐   ┌───────────────┐      │
+  │   │    Team A     │   │    Team B     │  ...  │
+  │   │               │   │               │      │
+  │   │  [LEAD] user  │   │  [LEAD] user  │      │
+  │   │  [MEMBER] ... │   │  [MEMBER] ... │      │
+  │   │  [ASSISTANT]  │   │  [ASSISTANT]  │      │
+  │   └───────────────┘   └───────────────┘      │
+  └──────────────────────────────────────────────┘
+
+  TeamRequest flow (initiated by LEAD):
+    LEAD creates request  →  status: "pending"
+    MANAGER approves/rejects  →  status: "approved" | "rejected"
+    On approval: TeamMember record created/deleted/transferred
+          </pre>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Multi-Team</p>
+            <p class="text-sm text-gray-300">A user can be a member of multiple teams simultaneously via the <code class="text-indigo-300">TeamMember</code> join table.</p>
+          </div>
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Dual-Path Writes</p>
+            <p class="text-sm text-gray-300"><code class="text-green-400">team.write</code> holders act directly. Team LEADs create <code class="text-indigo-300">TeamRequest</code> records that require manager approval.</p>
+          </div>
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Audit Trail</p>
+            <p class="text-sm text-gray-300">Every create / update / delete / assign operation writes to the <code class="text-indigo-300">AuditLog</code> table automatically.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══════════════════════════════════════════
+           PERMISSIONS
+      ══════════════════════════════════════════ -->
+      <section id="permissions">
+        <h2 class="text-2xl font-bold text-white mb-6">Permissions Reference</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+          <table class="text-sm w-full">
+            <thead>
+              <tr class="text-gray-400 border-b border-gray-700 bg-gray-950">
+                <th class="text-left px-6 py-3">Permission Key</th>
+                <th class="text-left px-6 py-3">Who Needs It</th>
+                <th class="text-left px-6 py-3">What It Unlocks</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800">
+              <tr class="hover:bg-gray-800/50"><td class="px-6 py-3 font-mono text-violet-300">team.write</td><td class="px-6 py-3 text-gray-300">Manager / HR Admin</td><td class="px-6 py-3 text-gray-300">Create/update/delete teams; assign/remove members directly; approve requests</td></tr>
+              <tr class="hover:bg-gray-800/50"><td class="px-6 py-3 font-mono text-green-400">team.read</td><td class="px-6 py-3 text-gray-300">Manager, Lead, Member</td><td class="px-6 py-3 text-gray-300">List/get teams, members, requests</td></tr>
+              <tr class="hover:bg-gray-800/50"><td class="px-6 py-3 font-mono text-amber-400">team.assignLead</td><td class="px-6 py-3 text-gray-300">Manager / HR Admin</td><td class="px-6 py-3 text-gray-300">Assign or change the Team Lead</td></tr>
+              <tr class="hover:bg-gray-800/50"><td class="px-6 py-3 font-mono text-blue-400">user.write</td><td class="px-6 py-3 text-gray-300">Manager / HR Admin</td><td class="px-6 py-3 text-gray-300">Create new users (with optional team assignment)</td></tr>
+              <tr class="hover:bg-gray-800/50"><td class="px-6 py-3 font-mono text-blue-400">user.read</td><td class="px-6 py-3 text-gray-300">Manager, Lead</td><td class="px-6 py-3 text-gray-300">List/get user profiles and team memberships</td></tr>
+              <tr class="hover:bg-gray-800/50"><td class="px-6 py-3 font-mono text-indigo-300">attendance.self</td><td class="px-6 py-3 text-gray-300">Any authenticated user</td><td class="px-6 py-3 text-gray-300">Check in / check out</td></tr>
+              <tr class="hover:bg-gray-800/50"><td class="px-6 py-3 font-mono text-indigo-300">attendance.read</td><td class="px-6 py-3 text-gray-300">Manager, Lead</td><td class="px-6 py-3 text-gray-300">View attendance records across team/users</td></tr>
+              <tr class="hover:bg-gray-800/50"><td class="px-6 py-3 font-mono text-indigo-300">location.request</td><td class="px-6 py-3 text-gray-300">Manager, Lead</td><td class="px-6 py-3 text-gray-300">Send location request to a team member</td></tr>
+              <tr class="hover:bg-gray-800/50"><td class="px-6 py-3 font-mono text-indigo-300">location.read</td><td class="px-6 py-3 text-gray-300">Manager, Lead</td><td class="px-6 py-3 text-gray-300">Read location request result</td></tr>
+              <tr class="hover:bg-gray-800/50"><td class="px-6 py-3 font-mono text-gray-400">device.register</td><td class="px-6 py-3 text-gray-300">Any authenticated user</td><td class="px-6 py-3 text-gray-300">Register push-notification device</td></tr>
+              <tr class="hover:bg-gray-800/50"><td class="px-6 py-3 font-mono text-gray-400">consent.write</td><td class="px-6 py-3 text-gray-300">Any authenticated user</td><td class="px-6 py-3 text-gray-300">Grant / revoke consent</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════
+           TEAMS
+      ══════════════════════════════════════════ -->
+      <section>
+        <h2 class="text-2xl font-bold text-white mb-1">Teams</h2>
+        <p class="text-gray-400 text-sm mb-8">Base path: <code class="text-indigo-400 font-mono">/api/teams</code></p>
+
+        <!-- Create Team -->
+        <div id="team-create" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/teams</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">team.write</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Creates a new team. Optionally sets a team lead at creation time. Writes an audit log entry.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body <span class="text-gray-600">(application/json)</span></p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "name": "Sales East",   // required — string, min 2 chars
+  "leadId": "clusr1..."   // optional — userId to set as Team Lead
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 201</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "id": "clteam1...",
+  "name": "Sales East",
+  "teamLeadId": "clusr1...",
+  "createdAt": "2025-01-10T09:00:00.000Z",
+  "updatedAt": "2025-01-10T09:00:00.000Z"
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- List Teams -->
+        <div id="team-list" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/teams</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">team.read</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Returns all teams with team lead info, a preview of up to 5 members, and total member count.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "teams": [
+    {
+      "id": "clteam1...",
+      "name": "Sales East",
+      "teamLeadId": "clusr1...",
+      "teamLead": {
+        "id": "clusr1...",
+        "name": "Ravi Sharma",
+        "email": "ravi@company.com"
+      },
+      "members": [
+        { "id": "clmem1...", "userId": "clusr2...", "role": "MEMBER",
+          "user": { "id": "clusr2...", "name": "Priya Mehta", "email": "priya@company.com" } }
+      ],
+      "_count": { "members": 12 },
+      "createdAt": "2025-01-10T09:00:00.000Z",
+      "updatedAt": "2025-06-01T12:00:00.000Z"
+    }
+  ]
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Get Team -->
+        <div id="team-get" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/teams/:id</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">team.read</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Returns a single team with <strong class="text-white">all members</strong> (including nested user profile and roles).</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "id": "clteam1...",
+  "name": "Sales East",
+  "teamLeadId": "clusr1...",
+  "members": [
+    {
+      "id": "clmem1...",
+      "userId": "clusr2...",
+      "teamId": "clteam1...",
+      "role": "MEMBER",
+      "joinedAt": "2025-02-01T09:00:00.000Z",
+      "meta": { "assignedBy": "clusr0..." },
+      "user": {
+        "id": "clusr2...",
+        "name": "Priya Mehta",
+        "email": "priya@company.com",
+        "roles": [{ "id": "clrole1...", "name": "Sales Agent" }]
+      }
+    }
+  ],
+  "createdAt": "2025-01-10T09:00:00.000Z",
+  "updatedAt": "2025-06-01T12:00:00.000Z"
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 404</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-red-300">{ "error": "Team not found" }</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Update Team -->
+        <div id="team-update" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-patch text-xs font-bold px-3 py-1 rounded-full font-mono">PATCH</span>
+            <code class="text-white font-mono text-sm">/api/teams/:id</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">team.write</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Partially updates team name or lead. Pass <code class="text-amber-300">leadId: null</code> to clear the current lead.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body (all optional)</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "name": "Sales West",       // optional — string, min 2 chars
+  "leadId": "clusr3..." | null // optional — userId or null to clear
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{ /* updated Team object */ }</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delete Team -->
+        <div id="team-delete" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-delete text-xs font-bold px-3 py-1 rounded-full font-mono">DELETE</span>
+            <code class="text-white font-mono text-sm">/api/teams/:id</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">team.write</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Deletes a team and <strong class="text-white">all its TeamMember records</strong> (cascades). Writes audit log.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 204 — No content</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Assign Team Lead -->
+        <div id="team-assign-lead" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/teams/:id/assign-lead</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">team.assignLead</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">
+              Designates a specific user as the Team Lead. Updates <code class="text-amber-300">team.teamLeadId</code>.
+              Requires the special <code class="text-amber-300">team.assignLead</code> permission (separate from <code class="text-amber-300">team.write</code>).
+            </p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "leadId": "clusr3..."  // required — userId of the new lead
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{ /* updated Team object with new teamLeadId */ }</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════
+           TEAM MEMBERS
+      ══════════════════════════════════════════ -->
+      <section>
+        <h2 class="text-2xl font-bold text-white mb-1">Team Members</h2>
+        <p class="text-gray-400 text-sm mb-3">Base path: <code class="text-indigo-400 font-mono">/api/teams/:teamId/members</code></p>
+        <div class="bg-amber-950 border border-amber-800 rounded-xl p-4 mb-8 text-sm text-amber-200">
+          <strong>Dual-path logic:</strong> If the caller has <code>team.write</code> → the assignment/removal happens <strong>immediately</strong>.
+          If the caller is a team <code>LEAD</code> without <code>team.write</code> → a <code>TeamRequest</code> record is created with
+          <code>status: "pending"</code> and must be approved by the manager.
+        </div>
+
+        <!-- List Members -->
+        <div id="member-list" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/teams/:teamId/members</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">team.read</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Returns all members of a team with their nested user profile and roles. Capped at 200 rows.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "count": 10,
+  "rows": [
+    {
+      "id": "clmem1...",
+      "userId": "clusr2...",
+      "teamId": "clteam1...",
+      "role": "MEMBER",
+      "joinedAt": "2025-02-01T09:00:00.000Z",
+      "meta": { "assignedBy": "clusr0..." },
+      "user": {
+        "id": "clusr2...",
+        "name": "Priya Mehta",
+        "email": "priya@company.com",
+        "roles": [{ "id": "clrole1...", "name": "Sales Agent" }]
+      }
+    }
+  ]
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Assign Member -->
+        <div id="member-assign" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/teams/:teamId/members</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">team.write (or LEAD)</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">
+              Assigns one or more users to a team. Provide either <code class="text-amber-300">userId</code> (single) or
+              <code class="text-amber-300">userIds</code> (array). Already-existing members are automatically skipped.
+            </p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "userId": "clusr4...",           // optional — single user
+  "userIds": ["clusr5...", "clusr6..."], // optional — multiple users
+  "role": "MEMBER"                 // optional — "MEMBER" | "ASSISTANT_LEAD" | "LEAD" (default: MEMBER)
+  // At least one of userId or userIds is required
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200 — Direct assignment (manager)</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "assigned": [
+    { "id": "clmem2...", "userId": "clusr4...", "teamId": "clteam1...", "role": "MEMBER", "joinedAt": "..." }
+  ],
+  "skipped": [
+    { "userId": "clusr5...", "reason": "already member" }
+  ],
+  "requests": []
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200 — LEAD-initiated (pending approval)</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "assigned": [],
+  "skipped": [],
+  "requests": [
+    {
+      "id": "clreq1...",
+      "type": "assign",
+      "requesterId": "clusr1...",
+      "targetUserId": "clusr4...",
+      "toTeamId": "clteam1...",
+      "status": "pending",
+      "createdAt": "2025-06-01T12:00:00.000Z"
+    }
+  ]
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bulk Assign Members -->
+        <div id="member-bulk-assign" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/teams/:teamId/members/bulk</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">team.write</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Semantically identical to the single-assign endpoint but intended for bulk operations. Same request/response shape.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "userIds": ["clusr5...", "clusr6...", "clusr7..."],
+  "role": "MEMBER"
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "assigned": [ /* TeamMember records */ ],
+  "skipped":  [ { "userId": "...", "reason": "already member" } ],
+  "requests": []
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Remove Member -->
+        <div id="member-remove" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-delete text-xs font-bold px-3 py-1 rounded-full font-mono">DELETE</span>
+            <code class="text-white font-mono text-sm">/api/teams/:teamId/members/:memberId</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">team.write (or LEAD)</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">
+              Removes a user from a team. <code class="text-indigo-300">:memberId</code> is the <strong>user ID</strong> (not the TeamMember record ID).
+              Manager removes directly; LEAD creates a pending removal request.
+            </p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body (optional)</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "reason": "Role change"  // optional — default: "Removed by admin"
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200 — Direct removal (manager)</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{ "removed": true }</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200 — LEAD-initiated request</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "request": {
+    "id": "clreq2...",
+    "type": "remove",
+    "status": "pending",
+    "fromTeamId": "clteam1...",
+    "targetUserId": "clusr4..."
+  }
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 404</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-red-300">{ "error": "Team member not found" }</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bulk Remove Members -->
+        <div id="member-bulk-remove" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/teams/:teamId/members/bulk-remove</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">team.write</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Removes multiple users from a team in a single request.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "userIds": ["clusr4...", "clusr5..."],  // required — min 1 item
+  "reason": "Team restructuring"           // required — min 5 chars
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "removed":  ["clusr4...", "clusr5..."],
+  "requests": [],
+  "failed":   [{ "userId": "clusr9...", "reason": "not a member" }]
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- List Team Users (legacy) -->
+        <div id="team-users" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/teams/:id/users</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">team.read</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Returns a flat list of users in the team with their team role. Useful for legacy integrations or quick user lookups.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "users": [
+    {
+      "id": "clusr2...",
+      "name": "Priya Mehta",
+      "email": "priya@company.com",
+      "roles": [{ "id": "clrole1...", "name": "Sales Agent" }],
+      "teamRole": "MEMBER",
+      "joinedAt": "2025-02-01T09:00:00.000Z"
+    }
+  ]
+}</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════
+           TEAM REQUESTS
+      ══════════════════════════════════════════ -->
+      <section>
+        <h2 class="text-2xl font-bold text-white mb-1">Team Requests</h2>
+        <p class="text-gray-400 text-sm mb-3">Base path: <code class="text-indigo-400 font-mono">/api/teams</code></p>
+        <div class="bg-indigo-950 border border-indigo-800 rounded-xl p-4 mb-8 text-sm text-indigo-200">
+          <strong>Request types:</strong> &nbsp;
+          <code class="bg-gray-900 px-2 py-0.5 rounded">assign</code> — add a user to a team &nbsp;|&nbsp;
+          <code class="bg-gray-900 px-2 py-0.5 rounded">remove</code> — remove a user &nbsp;|&nbsp;
+          <code class="bg-gray-900 px-2 py-0.5 rounded">transfer</code> — move a user to another team &nbsp;|&nbsp;
+          <code class="bg-gray-900 px-2 py-0.5 rounded">join</code> — user requests to join a team
+        </div>
+
+        <!-- Transfer Request -->
+        <div id="req-transfer" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/teams/:teamId/members/:memberId/transfer-request</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">team.read (LEAD only)</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">
+              Allows a team <strong class="text-white">LEAD</strong> to request that one of their members be transferred to another team.
+              <code class="text-indigo-300">:memberId</code> is the <strong>userId</strong> of the member to transfer.
+              The request is queued for manager approval.
+            </p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "toTeamId": "clteam2...",           // required — destination team ID
+  "note": "Moving to support team"    // optional
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 201</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "id": "clreq3...",
+  "type": "transfer",
+  "requesterId": "clusr1...",
+  "targetUserId": "clusr4...",
+  "fromTeamId": "clteam1...",
+  "toTeamId": "clteam2...",
+  "status": "pending",
+  "note": "Moving to support team",
+  "respondedBy": null,
+  "respondedAt": null,
+  "createdAt": "2025-06-01T12:00:00.000Z"
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 401 (caller is not team LEAD)</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-red-300">{ "error": "Only team lead can request transfer" }</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Join Request -->
+        <div id="req-join" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/teams/:teamId/join-request</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">team.read (LEAD or target user)</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">
+              Creates a <code class="text-indigo-300">join</code> request so a user can be added to the team after manager approval.
+              Either the <strong class="text-white">target user themselves</strong> or the <strong class="text-white">team LEAD</strong> can initiate this.
+            </p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "targetUserId": "clusr7...",     // required — user to add
+  "note": "Requested by client"   // optional
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 201</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "id": "clreq4...",
+  "type": "join",
+  "requesterId": "clusr1...",
+  "targetUserId": "clusr7...",
+  "toTeamId": "clteam1...",
+  "fromTeamId": null,
+  "status": "pending",
+  "note": "Requested by client",
+  "createdAt": "2025-06-01T12:00:00.000Z"
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- List Requests -->
+        <div id="req-list" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/teams/requests</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">team.read</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Returns all team requests (all types). Ordered by <code class="text-amber-300">createdAt</code> descending. Filterable by status and type.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Query Parameters</p>
+              <table class="text-sm w-full">
+                <thead><tr class="text-gray-500 border-b border-gray-700"><th class="text-left py-1 pr-4">Param</th><th class="text-left py-1 pr-4">Type</th><th class="text-left py-1">Description</th></tr></thead>
+                <tbody class="divide-y divide-gray-800">
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">status</td><td class="py-2 pr-4 text-gray-400">string</td><td class="py-2 text-gray-300"><code>pending | approved | rejected</code></td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">type</td><td class="py-2 pr-4 text-gray-400">string</td><td class="py-2 text-gray-300"><code>assign | remove | transfer | join</code></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "count": 3,
+  "rows": [
+    {
+      "id": "clreq1...",
+      "type": "assign",
+      "requesterId": "clusr1...",
+      "targetUserId": "clusr7...",
+      "fromTeamId": null,
+      "toTeamId": "clteam1...",
+      "status": "pending",
+      "note": null,
+      "respondedBy": null,
+      "respondedAt": null,
+      "createdAt": "2025-06-01T12:00:00.000Z",
+      "updatedAt": "2025-06-01T12:00:00.000Z"
+    }
+  ]
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Respond to Request -->
+        <div id="req-respond" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/teams/requests/:requestId/respond</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">team.write</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">
+              Manager approves or rejects a pending team request. On approval the corresponding database action is performed automatically.
+            </p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "approve": true,             // required — true to approve, false to reject
+  "note": "Looks good to me"   // optional
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">What happens on <code class="text-green-400">approve: true</code></p>
+              <table class="text-sm w-full">
+                <thead><tr class="text-gray-500 border-b border-gray-700"><th class="text-left py-1 pr-4">Request Type</th><th class="text-left py-1">Action Performed</th></tr></thead>
+                <tbody class="divide-y divide-gray-800">
+                  <tr><td class="py-2 pr-4 font-mono text-blue-400">assign</td><td class="py-2 text-gray-300">Creates <code>TeamMember</code> with role <code>MEMBER</code> in <code>toTeamId</code></td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-red-400">remove</td><td class="py-2 text-gray-300">Deletes <code>TeamMember</code> from <code>fromTeamId</code></td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-amber-400">transfer</td><td class="py-2 text-gray-300">Transaction: deletes old <code>TeamMember</code>, creates new <code>TeamMember</code> in <code>toTeamId</code></td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-green-400">join</td><td class="py-2 text-gray-300">Creates <code>TeamMember</code> with role <code>MEMBER</code> in <code>toTeamId</code></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "request": {
+    "id": "clreq1...",
+    "status": "approved",
+    "respondedBy": "clusr0...",
+    "respondedAt": "2025-06-01T12:30:00.000Z"
+  },
+  "member": { /* TeamMember record (for assign/transfer/join) */ }
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 400 (already processed)</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-red-300">{ "error": "Request already processed" }</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════
+           USERS
+      ══════════════════════════════════════════ -->
+      <section>
+        <h2 class="text-2xl font-bold text-white mb-1">Users &amp; Team Assignment</h2>
+        <p class="text-gray-400 text-sm mb-8">Base path: <code class="text-indigo-400 font-mono">/api/users</code></p>
+
+        <!-- Create User -->
+        <div id="user-create" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/users</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">user.write</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">
+              Creates a new CRM user and optionally places them in a team immediately. If <code class="text-amber-300">teamId</code>
+              is supplied, a <code class="text-indigo-300">TeamMember</code> record with role <code>MEMBER</code> is created automatically.
+            </p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "name": "Anil Kumar",           // required — min 2 chars
+  "email": "anil@company.com",    // required — valid email, unique
+  "password": "Secret@123",       // required — min 6 chars
+  "roleIds": ["clrole1..."],      // required — at least 1 role ID
+  "teamId": "clteam1..."          // optional — immediately joins the team as MEMBER
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 201</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "user": {
+    "id": "clusr8...",
+    "name": "Anil Kumar",
+    "email": "anil@company.com",
+    "roles": [{ "id": "clrole1...", "name": "Sales Agent" }],
+    "teamMembers": [
+      { "teamId": "clteam1...", "teamName": "Sales East", "role": "MEMBER", "joinedAt": "2025-06-01T12:00:00.000Z" }
+    ]
+  }
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- List Users -->
+        <div id="user-list" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/users</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">user.read</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Returns up to 100 users ordered by creation date (newest first), each with their roles and all team memberships.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "users": [
+    {
+      "id": "clusr8...",
+      "name": "Anil Kumar",
+      "email": "anil@company.com",
+      "roles": [{ "id": "clrole1...", "name": "Sales Agent" }],
+      "teamMembers": [
+        { "teamId": "clteam1...", "teamName": "Sales East", "role": "MEMBER", "joinedAt": "2025-06-01T12:00:00.000Z" },
+        { "teamId": "clteam3...", "teamName": "Support",    "role": "ASSISTANT_LEAD", "joinedAt": "2025-07-01T09:00:00.000Z" }
+      ]
+    }
+  ]
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Get User -->
+        <div id="user-get" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/users/:id</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">user.read</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Fetches a single user with their roles and all team memberships.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{ /* same shape as list item */ }</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 404</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-red-300">{ "error": "User not found" }</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════
+           ATTENDANCE
+      ══════════════════════════════════════════ -->
+      <section>
+        <h2 class="text-2xl font-bold text-white mb-1">HR — Attendance</h2>
+        <p class="text-gray-400 text-sm mb-8">Base path: <code class="text-indigo-400 font-mono">/api/hr/attendance</code></p>
+
+        <!-- Check In -->
+        <div id="att-checkin" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/hr/attendance/checkin</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">attendance.self</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">
+              Records a check-in for the authenticated user. Only <strong class="text-white">one check-in per calendar day</strong> is allowed.
+              If coordinates are provided, a <code class="text-indigo-300">LocationLog</code> entry is also created.
+            </p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body (all optional)</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "photoRef": "https://storage.example.com/selfies/xyz.jpg",
+  "latitude": 28.6139,
+  "longitude": 77.2090,
+  "accuracy": 10.5,
+  "locationTs": "2025-06-01T09:00:00.000Z",
+  "note": "Working from HQ"
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 201</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "attendance": {
+    "id": "clatt1...",
+    "userId": "clusr2...",
+    "checkinAt": "2025-06-01T09:00:00.000Z",
+    "checkoutAt": null,
+    "photoRef": "https://storage.example.com/selfies/xyz.jpg",
+    "note": "Working from HQ",
+    "status": "ACCEPTED",
+    "createdAt": "2025-06-01T09:00:00.000Z"
+  }
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 400 (duplicate check-in)</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-red-300">{ "error": "You have already checked in today" }</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Check Out -->
+        <div id="att-checkout" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/hr/attendance/checkout</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">attendance.self</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Records a check-out for today's attendance record. Sets <code class="text-amber-300">checkoutAt = now</code>.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">No Request Body required.</p>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "id": "clatt1...",
+  "userId": "clusr2...",
+  "checkinAt": "2025-06-01T09:00:00.000Z",
+  "checkoutAt": "2025-06-01T18:30:00.000Z",
+  "status": "ACCEPTED"
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 400</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-red-300">{ "error": "You haven't checked in today" }
+{ "error": "You've already checked out today" }</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- List Attendance -->
+        <div id="att-list" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/hr/attendance</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">attendance.read</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Manager view — returns paginated attendance records filterable by user, team, or date range.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Query Parameters</p>
+              <table class="text-sm w-full">
+                <thead><tr class="text-gray-500 border-b border-gray-700"><th class="text-left py-1 pr-4">Param</th><th class="text-left py-1 pr-4">Type</th><th class="text-left py-1">Description</th></tr></thead>
+                <tbody class="divide-y divide-gray-800">
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">userId</td><td class="py-2 pr-4 text-gray-400">string</td><td class="py-2 text-gray-300">Filter by specific user</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">teamId</td><td class="py-2 pr-4 text-gray-400">string</td><td class="py-2 text-gray-300">Filter by team (all members' records)</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">from</td><td class="py-2 pr-4 text-gray-400">ISO string</td><td class="py-2 text-gray-300">checkinAt &gt;= from</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">to</td><td class="py-2 pr-4 text-gray-400">ISO string</td><td class="py-2 text-gray-300">checkinAt &lt;= to</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">page</td><td class="py-2 pr-4 text-gray-400">number</td><td class="py-2 text-gray-300">Page number (default 1)</td></tr>
+                  <tr><td class="py-2 pr-4 font-mono text-indigo-300">limit</td><td class="py-2 pr-4 text-gray-400">number</td><td class="py-2 text-gray-300">Items per page (default 100)</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "count": 42,
+  "rows": [
+    {
+      "id": "clatt1...",
+      "userId": "clusr2...",
+      "checkinAt": "2025-06-01T09:00:00.000Z",
+      "checkoutAt": "2025-06-01T18:30:00.000Z",
+      "photoRef": "https://...",
+      "note": "Working from HQ",
+      "status": "ACCEPTED",
+      "user": {
+        "id": "clusr2...",
+        "name": "Priya Mehta",
+        "teamMembers": [{ "team": { "id": "clteam1...", "name": "Sales East" } }]
+      }
+    }
+  ]
+}</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════
+           LOCATION
+      ══════════════════════════════════════════ -->
+      <section>
+        <h2 class="text-2xl font-bold text-white mb-1">HR — Location Requests</h2>
+        <p class="text-gray-400 text-sm mb-3">Base path: <code class="text-indigo-400 font-mono">/api/hr/location-requests</code></p>
+        <div class="bg-gray-900 border border-gray-700 rounded-xl p-4 mb-8 text-sm text-gray-300">
+          <strong class="text-white">Privacy model:</strong> Only the original requester (manager/lead) can read the location result.
+          The target user must actively respond with their coordinates — the app cannot push location silently.
+        </div>
+
+        <!-- Request Location -->
+        <div id="loc-request" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/hr/location-requests</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">location.request</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Manager sends a location request to a team member. The member is notified and must respond within the TTL window.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "targetUserId": "clusr4...",    // required
+  "expiresInSeconds": 300,        // optional — minimum 5 seconds (default 300)
+  "note": "Client visit check"    // optional
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 201</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "requestId": "clloc1...",
+  "expiresAt": "2025-06-01T12:05:00.000Z"
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Respond to Location Request -->
+        <div id="loc-respond" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/hr/location-requests/:id/respond</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">requireAuth (target user only)</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Target user responds with their current coordinates. Only the user the request was sent to can respond.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "latitude": 28.6139,                         // required
+  "longitude": 77.2090,                        // required
+  "accuracy": 10.5,                            // optional — metres
+  "recordedAt": "2025-06-01T12:03:00.000Z"    // optional — defaults to now
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{ "ok": true }</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Get Location Result -->
+        <div id="loc-result" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/hr/location-requests/:id/result</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">location.read (requester only)</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Reads the coordinates submitted by the target user. Only the original requester can access this endpoint.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200 (responded)</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "coords": {
+    "latitude": 28.6139,
+    "longitude": 77.2090,
+    "accuracy": 10.5,
+    "recordedAt": "2025-06-01T12:03:00.000Z"
+  }
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 404 (not yet responded or expired)</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-red-300">{ "status": "not_found" }</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════
+           DEVICES & CONSENT
+      ══════════════════════════════════════════ -->
+      <section>
+        <h2 class="text-2xl font-bold text-white mb-1">HR — Devices &amp; Consent</h2>
+        <p class="text-gray-400 text-sm mb-8">Base paths: <code class="text-indigo-400 font-mono">/api/hr/devices</code> &nbsp;&amp;&nbsp; <code class="text-indigo-400 font-mono">/api/hr/consent</code></p>
+
+        <!-- Register Device -->
+        <div id="device-register" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/hr/devices/register</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">device.register</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Registers the current device for push notifications. Called on app login.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body (all optional)</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "deviceId": "device-uuid-123",
+  "platform": "ios",          // "ios" | "android" | "web"
+  "pushToken": "ExponentPushToken[...]",
+  "meta": {}
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 201</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "device": {
+    "id": "cldev1...",
+    "userId": "clusr2...",
+    "deviceId": "device-uuid-123",
+    "platform": "ios",
+    "pushToken": "ExponentPushToken[...]",
+    "meta": {},
+    "createdAt": "2025-06-01T09:00:00.000Z"
+  }
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Unregister Device -->
+        <div id="device-unregister" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/hr/devices/unregister</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">device.unregister</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Removes a device registration (e.g., on logout). Provide either <code class="text-amber-300">deviceId</code> or <code class="text-amber-300">pushToken</code>.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "deviceId": "device-uuid-123",   // optional
+  "pushToken": "ExponentPushToken[...]"  // optional
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{ "ok": true }</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- List Devices -->
+        <div id="device-list" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/hr/devices</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">device.read</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Returns all registered devices for the authenticated user.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "devices": [
+    { "id": "cldev1...", "platform": "ios", "pushToken": "...", "createdAt": "..." }
+  ]
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Grant Consent -->
+        <div id="consent-grant" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/hr/consent</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">consent.write</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Records that the user has granted consent for a specific feature (e.g., location sharing, photo capture).</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "type": "LOCATION",    // required — "LOCATION" | "PHOTO" | "TERMS"
+  "version": "1.2",      // optional — policy version
+  "meta": {}             // optional
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 201</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "consent": {
+    "id": "clcon1...",
+    "userId": "clusr2...",
+    "type": "LOCATION",
+    "version": "1.2",
+    "grantedAt": "2025-06-01T09:00:00.000Z",
+    "revokedAt": null
+  }
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Revoke Consent -->
+        <div id="consent-revoke" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-post text-xs font-bold px-3 py-1 rounded-full font-mono">POST</span>
+            <code class="text-white font-mono text-sm">/api/hr/consent/revoke</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">consent.write</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Revokes a previously granted consent. Provide either <code class="text-amber-300">id</code> or <code class="text-amber-300">type</code>.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Request Body</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-yellow-200">{
+  "id": "clcon1...",   // optional — specific consent record
+  "type": "LOCATION"   // optional — revoke by type
+}</pre>
+            </div>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "consent": {
+    "id": "clcon1...",
+    "type": "LOCATION",
+    "revokedAt": "2025-06-01T18:00:00.000Z"
+  }
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- List Consent -->
+        <div id="consent-list" class="mb-10 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-800 flex items-center gap-3">
+            <span class="badge-get text-xs font-bold px-3 py-1 rounded-full font-mono">GET</span>
+            <code class="text-white font-mono text-sm">/api/hr/consent</code>
+            <span class="ml-auto text-xs text-gray-500 font-mono">consent.read</span>
+          </div>
+          <div class="px-6 py-5 space-y-5">
+            <p class="text-gray-300 text-sm">Returns all consent records for the authenticated user.</p>
+            <div>
+              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Response 200</p>
+              <pre class="bg-gray-950 rounded-lg p-4 text-sm text-green-300">{
+  "consents": [
+    { "id": "clcon1...", "type": "LOCATION", "version": "1.2", "grantedAt": "...", "revokedAt": null },
+    { "id": "clcon2...", "type": "TERMS",    "version": "2.0", "grantedAt": "...", "revokedAt": null }
+  ]
+}</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════
+           ENUMS
+      ══════════════════════════════════════════ -->
+      <section id="enums">
+        <h2 class="text-2xl font-bold text-white mb-6">Enums &amp; Statuses</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <h3 class="text-white font-semibold mb-3">TeamMemberRole</h3>
+            <table class="text-sm w-full">
+              <tbody class="divide-y divide-gray-800">
+                <tr><td class="py-2 pr-4 font-mono text-green-400">MEMBER</td><td class="py-2 text-gray-300">Regular team member — cannot mutate membership directly</td></tr>
+                <tr><td class="py-2 pr-4 font-mono text-amber-400">ASSISTANT_LEAD</td><td class="py-2 text-gray-300">Elevated member — limited lead capabilities</td></tr>
+                <tr><td class="py-2 pr-4 font-mono text-violet-400">LEAD</td><td class="py-2 text-gray-300">Team Lead — can create TeamRequests for assignment/removal/transfer</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <h3 class="text-white font-semibold mb-3">TeamRequest.type</h3>
+            <table class="text-sm w-full">
+              <tbody class="divide-y divide-gray-800">
+                <tr><td class="py-2 pr-4 font-mono text-blue-400">assign</td><td class="py-2 text-gray-300">Add a user to a team</td></tr>
+                <tr><td class="py-2 pr-4 font-mono text-red-400">remove</td><td class="py-2 text-gray-300">Remove a user from a team</td></tr>
+                <tr><td class="py-2 pr-4 font-mono text-amber-400">transfer</td><td class="py-2 text-gray-300">Move a user from one team to another</td></tr>
+                <tr><td class="py-2 pr-4 font-mono text-green-400">join</td><td class="py-2 text-gray-300">User requests to join a team</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <h3 class="text-white font-semibold mb-3">TeamRequest.status</h3>
+            <table class="text-sm w-full">
+              <tbody class="divide-y divide-gray-800">
+                <tr><td class="py-2 pr-4 font-mono text-amber-400">pending</td><td class="py-2 text-gray-300">Awaiting manager approval</td></tr>
+                <tr><td class="py-2 pr-4 font-mono text-green-400">approved</td><td class="py-2 text-gray-300">Manager approved — action was executed</td></tr>
+                <tr><td class="py-2 pr-4 font-mono text-red-400">rejected</td><td class="py-2 text-gray-300">Manager rejected — no action taken</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <h3 class="text-white font-semibold mb-3">ConsentType</h3>
+            <table class="text-sm w-full">
+              <tbody class="divide-y divide-gray-800">
+                <tr><td class="py-2 pr-4 font-mono text-indigo-300">LOCATION</td><td class="py-2 text-gray-300">Location sharing consent</td></tr>
+                <tr><td class="py-2 pr-4 font-mono text-indigo-300">PHOTO</td><td class="py-2 text-gray-300">Camera / photo capture consent</td></tr>
+                <tr><td class="py-2 pr-4 font-mono text-indigo-300">TERMS</td><td class="py-2 text-gray-300">Terms &amp; conditions acceptance</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </section>
+
+
+      <!-- ══════════════════════════════════════════
+           SUMMARY TABLE
+      ══════════════════════════════════════════ -->
+      <section id="summary">
+        <h2 class="text-2xl font-bold text-white mb-6">All Endpoints Summary</h2>
+        <div class="overflow-x-auto">
+          <table class="text-sm w-full">
+            <thead>
+              <tr class="text-gray-500 border-b border-gray-700 text-left">
+                <th class="py-2 pr-3">#</th>
+                <th class="py-2 pr-3">Method</th>
+                <th class="py-2 pr-6">Path</th>
+                <th class="py-2 pr-4">Permission</th>
+                <th class="py-2">Description</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800">
+              <!-- Teams -->
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">1</td><td class="py-2 pr-3"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/teams</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">team.write</td><td class="py-2 text-gray-300">Create team</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">2</td><td class="py-2 pr-3"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/teams</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">team.read</td><td class="py-2 text-gray-300">List all teams</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">3</td><td class="py-2 pr-3"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/teams/:id</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">team.read</td><td class="py-2 text-gray-300">Get team with all members</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">4</td><td class="py-2 pr-3"><span class="badge-patch text-xs font-mono font-bold px-2 py-0.5 rounded">PATCH</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/teams/:id</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">team.write</td><td class="py-2 text-gray-300">Update team name or lead</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">5</td><td class="py-2 pr-3"><span class="badge-delete text-xs font-mono font-bold px-2 py-0.5 rounded">DELETE</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/teams/:id</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">team.write</td><td class="py-2 text-gray-300">Delete team (cascades members)</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">6</td><td class="py-2 pr-3"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/teams/:id/users</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">team.read</td><td class="py-2 text-gray-300">List team users (flat)</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">7</td><td class="py-2 pr-3"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/teams/:id/assign-lead</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">team.assignLead</td><td class="py-2 text-gray-300">Assign team lead</td></tr>
+              <!-- Members -->
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">8</td><td class="py-2 pr-3"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/teams/:teamId/members</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">team.read</td><td class="py-2 text-gray-300">List team members</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">9</td><td class="py-2 pr-3"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/teams/:teamId/members</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">team.write</td><td class="py-2 text-gray-300">Assign member(s) to team</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">10</td><td class="py-2 pr-3"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/teams/:teamId/members/bulk</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">team.write</td><td class="py-2 text-gray-300">Bulk assign members</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">11</td><td class="py-2 pr-3"><span class="badge-delete text-xs font-mono font-bold px-2 py-0.5 rounded">DELETE</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/teams/:teamId/members/:memberId</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">team.write</td><td class="py-2 text-gray-300">Remove member from team</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">12</td><td class="py-2 pr-3"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/teams/:teamId/members/bulk-remove</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">team.write</td><td class="py-2 text-gray-300">Bulk remove members</td></tr>
+              <!-- Requests -->
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">13</td><td class="py-2 pr-3"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/teams/:teamId/members/:memberId/transfer-request</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">team.read</td><td class="py-2 text-gray-300">Create transfer request (LEAD only)</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">14</td><td class="py-2 pr-3"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/teams/:teamId/join-request</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">team.read</td><td class="py-2 text-gray-300">Create join request</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">15</td><td class="py-2 pr-3"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/teams/requests</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">team.read</td><td class="py-2 text-gray-300">List all team requests</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">16</td><td class="py-2 pr-3"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/teams/requests/:requestId/respond</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">team.write</td><td class="py-2 text-gray-300">Approve or reject request</td></tr>
+              <!-- Users -->
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">17</td><td class="py-2 pr-3"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/users</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">user.write</td><td class="py-2 text-gray-300">Create user (with optional team)</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">18</td><td class="py-2 pr-3"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/users</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">user.read</td><td class="py-2 text-gray-300">List users with team memberships</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">19</td><td class="py-2 pr-3"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/users/:id</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">user.read</td><td class="py-2 text-gray-300">Get user with team memberships</td></tr>
+              <!-- Attendance -->
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">20</td><td class="py-2 pr-3"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/hr/attendance/checkin</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">attendance.self</td><td class="py-2 text-gray-300">Check in (once per day)</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">21</td><td class="py-2 pr-3"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/hr/attendance/checkout</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">attendance.self</td><td class="py-2 text-gray-300">Check out</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">22</td><td class="py-2 pr-3"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/hr/attendance</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">attendance.read</td><td class="py-2 text-gray-300">List attendance (team/date filters)</td></tr>
+              <!-- Location -->
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">23</td><td class="py-2 pr-3"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/hr/location-requests</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">location.request</td><td class="py-2 text-gray-300">Send location request to member</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">24</td><td class="py-2 pr-3"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/hr/location-requests/:id/respond</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">requireAuth</td><td class="py-2 text-gray-300">Member responds with coordinates</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">25</td><td class="py-2 pr-3"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/hr/location-requests/:id/result</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">location.read</td><td class="py-2 text-gray-300">Get member's location result</td></tr>
+              <!-- Devices -->
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">26</td><td class="py-2 pr-3"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/hr/devices/register</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">device.register</td><td class="py-2 text-gray-300">Register push device</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">27</td><td class="py-2 pr-3"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/hr/devices/unregister</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">device.unregister</td><td class="py-2 text-gray-300">Unregister device</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">28</td><td class="py-2 pr-3"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/hr/devices</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">device.read</td><td class="py-2 text-gray-300">List registered devices</td></tr>
+              <!-- Consent -->
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">29</td><td class="py-2 pr-3"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/hr/consent</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">consent.write</td><td class="py-2 text-gray-300">Grant consent</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">30</td><td class="py-2 pr-3"><span class="badge-post text-xs font-mono font-bold px-2 py-0.5 rounded">POST</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/hr/consent/revoke</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">consent.write</td><td class="py-2 text-gray-300">Revoke consent</td></tr>
+              <tr class="hover:bg-gray-900 transition"><td class="py-2 pr-3 text-gray-500">31</td><td class="py-2 pr-3"><span class="badge-get text-xs font-mono font-bold px-2 py-0.5 rounded">GET</span></td><td class="py-2 pr-6 font-mono text-indigo-300">/api/hr/consent</td><td class="py-2 pr-4 font-mono text-xs text-gray-400">consent.read</td><td class="py-2 text-gray-300">List consent records</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="border-t border-gray-800 px-6 md:px-12 py-6 mt-12 text-sm text-gray-500 flex items-center justify-between">
+      <span>CRM Backend · Manager &amp; Team Management API Reference</span>
+      <span>Generated Mar 2026</span>
+    </div>
+  </main>
+
+</body>
+</html>

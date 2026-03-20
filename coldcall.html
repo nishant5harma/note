@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CRM Backend — Cold Call</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-950 text-gray-200">
+    <div class="max-w-6xl mx-auto px-6 py-10">
+      <header class="mb-10">
+        <h1 class="text-3xl font-extrabold text-white">Cold Call Module</h1>
+        <p class="text-gray-400 mt-2">
+          End-to-end flow + all endpoints for uploading cold call data, distributing to teams, agent calling
+          workflow (pull/lock/attempt/complete), retries & auto-unlock, reports, analytics, and quotas.
+        </p>
+        <div class="mt-4 bg-gray-900 border border-gray-800 rounded-xl p-4 text-sm text-gray-300">
+          <p>
+            <strong class="text-white">Base path:</strong>
+            <code class="text-indigo-200">/api/coldcall</code>
+          </p>
+          <p class="mt-1">
+            <strong class="text-white">Auth:</strong> All ColdCall endpoints are behind
+            <code class="text-indigo-200">JWT</code> (because AppRouter mounts it as
+            <code class="text-indigo-200">/api/coldcall</code> with <code class="text-indigo-200">requireAuth</code>).
+          </p>
+          <p class="mt-1">
+            <strong class="text-white">RBAC:</strong> each route also checks
+            <code class="text-indigo-200">requirePermission("coldcall", "...")</code>
+            (examples below).
+          </p>
+        </div>
+      </header>
+
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-4">Flow overview (how it works)</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-sm text-gray-300 space-y-4">
+          <div class="bg-indigo-950 border border-indigo-800 rounded-lg p-4 text-indigo-100">
+            <p class="font-semibold mb-2">ColdCall assignment = 2 steps</p>
+            <ul class="list-disc list-inside space-y-1">
+              <li><strong class="text-white">Team assignment</strong> happens at <code>distribute</code> time (<code>assignedTeamId</code>).</li>
+              <li><strong class="text-white">Employee assignment</strong> happens at <code>pull</code> time via lock (<code>lockUserId</code> + <code>lockExpiresAt</code>).</li>
+            </ul>
+          </div>
+          <ol class="list-decimal list-inside space-y-2">
+            <li>
+              <strong class="text-white">Upload file</strong> (Excel/CSV) →
+              backend creates a <code>ColdCallBatch</code> + many <code>ColdCallEntry</code> rows.
+              Duplicate control is via <code>dedupePolicy</code> (keep/skip).
+            </li>
+            <li>
+              <strong class="text-white">Distribute batch to teams</strong> →
+              batch entries get <code>assignedTeamId</code> (routing logic in distribute service).
+              There is also a <strong class="text-white">preview</strong> endpoint for dry-run.
+            </li>
+            <li>
+              <strong class="text-white">Agent calling loop</strong>:
+              agent hits <code>pull</code> to claim next entry.
+              Backend uses Postgres row-locking (<code>FOR UPDATE SKIP LOCKED</code>) so two agents never get
+              the same entry.
+            </li>
+            <li>
+              <strong class="text-white">Lock + TTL</strong>:
+              claimed entries move to <code>in_progress</code> and get <code>lockUserId</code> +
+              <code>lockExpiresAt</code>. Agent can refresh lock or release it.
+            </li>
+            <li>
+              <strong class="text-white">Attempts</strong>:
+              agent can log multiple attempts per entry. This does not finalize the entry.
+            </li>
+            <li>
+              <strong class="text-white">Complete</strong>:
+              finalize entry as <code>done</code> with a response/disposition/summary.
+              Optionally it can create a CRM <code>Lead</code> (source = <code>cold_call</code>) and an optional
+              lead follow-up.
+            </li>
+            <li>
+              <strong class="text-white">Retry</strong>:
+              after completion, backend evaluates retry rules and can schedule the entry to return to
+              <code>pending</code> later (BullMQ).
+            </li>
+            <li>
+              <strong class="text-white">Auto-unlock</strong>:
+              a repeating BullMQ job clears expired locks so stuck entries come back to <code>pending</code>.
+            </li>
+            <li>
+              <strong class="text-white">Reports/Analytics</strong>:
+              report endpoints summarize batches/entries/teams/agents.
+              analytics endpoints provide team/agent performance + leaderboard.
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-4">Upload</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-sm text-gray-300 space-y-4">
+          <div class="bg-amber-950 border border-amber-800 rounded-lg p-4 text-amber-100">
+            <p class="font-semibold mb-2">Important about teamIds on upload</p>
+            <ul class="list-disc list-inside space-y-1">
+              <li>If you pass <code>mode=manual</code> + <code>teamIds</code>, entries are pre-filled with <code>assignedTeamId = teamIds[0]</code>.</li>
+              <li>Otherwise, entries will be assigned to teams later by <code>distribute</code>.</li>
+            </ul>
+          </div>
+          <div class="bg-gray-950 rounded-lg p-4">
+            <p class="font-semibold text-white mb-2">Supported file formats (important)</p>
+            <ul class="list-disc list-inside text-gray-300 space-y-1">
+              <li><strong class="text-white">Supported</strong>: <code>.xlsx</code>, <code>.xls</code>, <code>.csv</code></li>
+              <li><strong class="text-white">Not supported currently</strong>: <code>.xml</code></li>
+            </ul>
+            <p class="text-gray-400 text-xs mt-2">
+              Backend currently parses XLSX/CSV (XML import is not implemented).
+            </p>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <p class="font-semibold text-white mb-2">Expected columns (header names)</p>
+            <p class="text-gray-400 text-xs mb-2">
+              Importer tries common aliases. Minimum recommended: phone OR email. Name is optional.
+            </p>
+            <ul class="list-disc list-inside text-gray-300 space-y-1">
+              <li><strong class="text-white">Phone</strong>: <code>phone</code>, <code>mobile</code>, <code>contact</code>, <code>phone number</code></li>
+              <li><strong class="text-white">Email</strong>: <code>email</code>, <code>mail</code></li>
+              <li><strong class="text-white">Name</strong>: <code>name</code>, <code>fullname</code>, <code>full name</code></li>
+              <li><strong class="text-white">Any extra columns</strong>: saved into <code>payload</code> JSON per entry</li>
+            </ul>
+            <p class="text-gray-400 text-xs mt-2">
+              Phone is normalized to digits-only before saving.
+            </p>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-indigo-600 text-white">POST</span>
+              <code class="text-white font-mono text-sm">/api/coldcall/upload</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + coldcall.upload</span>
+            </div>
+            <p class="text-gray-400 text-xs mb-2">
+              Multipart upload (<code>file</code> field). Creates a batch + entries.
+            </p>
+            <pre class="text-xs text-yellow-200">POST /api/coldcall/upload
+Authorization: Bearer &lt;token&gt;
+Content-Type: multipart/form-data
+
+file: &lt;xlsx/csv&gt;
+mode: manual | decorator
+dedupePolicy: keep | skip
+teamIds: ["&lt;teamId&gt;"]  (optional)
+routingConfig: {...}   (optional JSON string)</pre>
+            <p class="text-gray-400 text-xs mt-2">
+              Response includes: <code>batchId</code>, counts (<code>created/duplicates/skipped</code>) and a small
+              preview.
+            </p>
+          </div>
+
+          <div class="bg-indigo-950 border border-indigo-800 rounded-lg p-4 text-indigo-100">
+            <p class="font-semibold mb-2">Bulk Lead import (from ColdCall)</p>
+            <ul class="list-disc list-inside space-y-1">
+              <li>ColdCall upload creates <strong class="text-white">ColdCallEntry</strong>, not Leads directly.</li>
+              <li>Lead creation happens on agent action: <code>POST /api/coldcall/pull/entries/:id/complete</code> with <code>leadConversion.createLead=true</code>.</li>
+              <li>Created lead will have <code>source=cold_call</code> and is linked back to the entry.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-4">Batch distribution</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-sm text-gray-300 space-y-4">
+          <div class="bg-gray-950 rounded-lg p-4">
+            <p class="font-semibold text-white mb-2">How distribution decides the team</p>
+            <ul class="list-disc list-inside text-gray-300 space-y-1">
+              <li><strong class="text-white">Which entries are considered?</strong> default = only entries with <code>assignedTeamId = null</code>. Use <code>force=true</code> to re-distribute all.</li>
+              <li><strong class="text-white">Which teams are available?</strong> taken from <code>batch.teamConfig.selectedTeamIds</code>, else derived from <code>batch.routingConfig.rules</code>.</li>
+              <li><strong class="text-white">Per-entry routing rules (optional):</strong> <code>location</code>, <code>budget</code>. If a rule returns a teamId, that team is used.</li>
+              <li><strong class="text-white">Fallback:</strong> if no rule decides, backend uses Redis <strong>weighted round-robin</strong>:
+                <code>rrKey = coldcall:rr:batch:&lt;batchId&gt;</code>, sequence expanded from weights.</li>
+            </ul>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <p class="font-semibold text-white mb-2">Example routingConfig (location + budget + fallback RR)</p>
+            <pre class="text-xs text-yellow-200">{
+  "rules": [
+    {
+      "kind": "location",
+      "config": {
+        "map": {
+          "mumbai": "TEAM_MUMBAI_ID",
+          "pune": { "teamId": "TEAM_PUNE_ID" }
+        }
+      }
+    },
+    {
+      "kind": "budget",
+      "config": {
+        "ranges": [
+          { "min": 0, "max": 5000000, "teamId": "TEAM_AFFORDABLE_ID" },
+          { "min": 5000001, "max": 20000000, "teamId": "TEAM_PREMIUM_ID" }
+        ]
+      }
+    },
+    { "kind": "default", "config": {} }
+  ]
+}</pre>
+            <p class="text-gray-400 text-xs mt-2">
+              If rules do not match, RR will pick from available teams (optionally weighted by <code>batch.teamConfig.weights</code>).
+            </p>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-emerald-600 text-white">GET</span>
+              <code class="text-white font-mono text-sm">/api/coldcall/batches/:id/preview</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + coldcall.read</span>
+            </div>
+            <pre class="text-xs text-yellow-200">GET /api/coldcall/batches/&lt;batchId&gt;/preview?limit=50&offset=0
+Authorization: Bearer &lt;token&gt;</pre>
+            <p class="text-gray-400 text-xs mt-2">Dry-run distribution preview + distribution breakdown.</p>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-indigo-600 text-white">POST</span>
+              <code class="text-white font-mono text-sm">/api/coldcall/batches/:id/distribute</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + coldcall.distribute</span>
+            </div>
+            <pre class="text-xs text-yellow-200">POST /api/coldcall/batches/&lt;batchId&gt;/distribute?dryRun=false&force=false
+Authorization: Bearer &lt;token&gt;</pre>
+            <p class="text-gray-400 text-xs mt-2">
+              Distribution assigns entries to teams (<code>assignedTeamId</code>). Use <code>dryRun</code> for testing.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-4">Agent workflow (pull / lock / attempt / complete)</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-sm text-gray-300 space-y-4">
+          <div class="bg-indigo-950 border border-indigo-800 rounded-lg p-4 text-indigo-100">
+            <p class="font-semibold mb-2">How “next call” is chosen</p>
+            <ul class="list-disc list-inside space-y-1">
+              <li>Backend picks only <code>status=pending</code> and teams in your membership.</li>
+              <li>Ordering: <code>priority DESC</code>, then <code>createdAt ASC</code>.</li>
+              <li>Concurrency-safe: Postgres <code>FOR UPDATE SKIP LOCKED</code>.</li>
+            </ul>
+          </div>
+          <div class="bg-gray-950 rounded-lg p-4">
+            <p class="font-semibold text-white mb-2">Who got which entry (team vs employee)</p>
+            <ul class="list-disc list-inside text-gray-300 space-y-1">
+              <li><strong class="text-white">Team</strong> = <code>ColdCallEntry.assignedTeamId</code> (after distribute).</li>
+              <li><strong class="text-white">Current agent holding it</strong> = <code>lockUserId</code> (only while <code>status=in_progress</code>).</li>
+              <li><strong class="text-white">Attempts history</strong> = <code>ColdCallAttempt</code> rows created via <code>/attempt</code> and final attempt created at <code>/complete</code>.</li>
+              <li>To view in UI, use <code>GET /api/coldcall/report/entries</code> with filters (<code>batchId/teamId/userId/status/response</code>).</li>
+            </ul>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-indigo-600 text-white">POST</span>
+              <code class="text-white font-mono text-sm">/api/coldcall/pull</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + coldcall.call</span>
+            </div>
+            <pre class="text-xs text-yellow-200">POST /api/coldcall/pull
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{ "preferredTeamIds": ["&lt;teamId&gt;"] }</pre>
+            <p class="text-gray-400 text-xs mt-2">
+              If <code>preferredTeamIds</code> not sent, backend uses your team memberships.
+            </p>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-indigo-600 text-white">POST</span>
+              <code class="text-white font-mono text-sm">/api/coldcall/pull/entries/:id/refresh-lock</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + coldcall.call</span>
+            </div>
+            <pre class="text-xs text-yellow-200">POST /api/coldcall/pull/entries/&lt;entryId&gt;/refresh-lock
+Authorization: Bearer &lt;token&gt;</pre>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-indigo-600 text-white">POST</span>
+              <code class="text-white font-mono text-sm">/api/coldcall/pull/entries/:id/release</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + coldcall.call</span>
+            </div>
+            <pre class="text-xs text-yellow-200">POST /api/coldcall/pull/entries/&lt;entryId&gt;/release
+Authorization: Bearer &lt;token&gt;</pre>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-indigo-600 text-white">POST</span>
+              <code class="text-white font-mono text-sm">/api/coldcall/pull/entries/:id/attempt</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + coldcall.call</span>
+            </div>
+            <pre class="text-xs text-yellow-200">POST /api/coldcall/pull/entries/&lt;entryId&gt;/attempt
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{ "result": "interested", "notes": "Asked to call back tomorrow" }</pre>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-indigo-600 text-white">POST</span>
+              <code class="text-white font-mono text-sm">/api/coldcall/pull/entries/:id/complete</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + coldcall.call</span>
+            </div>
+            <pre class="text-xs text-yellow-200">POST /api/coldcall/pull/entries/&lt;entryId&gt;/complete
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{
+  "response": "interested",
+  "disposition": "call_back",
+  "summary": "Wants 2BHK. Budget 50L.",
+  "leadConversion": {
+    "createLead": true,
+    "leadFields": { "name": "Ravi", "phone": "9999222334" },
+    "createFollowUp": true,
+    "followUpDueAt": "2026-03-18T10:00:00.000Z",
+    "followUpNote": "Call back re: site visit"
+  }
+}</pre>
+            <p class="text-gray-400 text-xs mt-2">
+              Completion may schedule a retry via BullMQ depending on retry rules.
+            </p>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-emerald-600 text-white">GET</span>
+              <code class="text-white font-mono text-sm">/api/coldcall/pull/my-tasks</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + coldcall.call</span>
+            </div>
+            <pre class="text-xs text-yellow-200">GET /api/coldcall/pull/my-tasks
+Authorization: Bearer &lt;token&gt;</pre>
+            <p class="text-gray-400 text-xs mt-2">
+              Returns locked entries, pendingCount for your teams, and recent completed list.
+            </p>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-indigo-600 text-white">POST</span>
+              <code class="text-white font-mono text-sm">/api/coldcall/pull/entries/:id/reassign</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + coldcall.assign</span>
+            </div>
+            <pre class="text-xs text-yellow-200">POST /api/coldcall/pull/entries/&lt;entryId&gt;/reassign
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{ "toUserId": "&lt;userId&gt;", "reason": "Move to senior agent" }</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-4">Reports</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-sm text-gray-300 space-y-4">
+          <div class="bg-gray-950 rounded-lg p-4">
+            <p class="font-semibold text-white mb-2">How to track distribution in frontend/admin</p>
+            <ul class="list-disc list-inside text-gray-300 space-y-1">
+              <li><strong class="text-white">Team-wise count after distribute</strong>: call <code>POST /batches/:id/distribute</code> (or <code>GET /batches/:id/preview</code>) and read <code>teamDistribution</code>.</li>
+              <li><strong class="text-white">Exactly which row went to which team</strong>: use preview <code>rows[] = { entryId, teamId }</code> (then fetch entries list filtered by <code>teamId</code>).</li>
+              <li><strong class="text-white">Which agent is working on what</strong>: filter entries by <code>userId</code> (lock owner / attempt user) and <code>status=in_progress</code> or use <code>/pull/my-tasks</code>.</li>
+            </ul>
+          </div>
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-emerald-600 text-white">GET</span>
+              <code class="text-white font-mono text-sm">/api/coldcall/report/batches/:id/summary</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + coldcall.read</span>
+            </div>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-emerald-600 text-white">GET</span>
+              <code class="text-white font-mono text-sm">/api/coldcall/report/entries</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + coldcall.read</span>
+            </div>
+            <pre class="text-xs text-yellow-200">GET /api/coldcall/report/entries?batchId=&lt;batchId&gt;&status=pending&teamId=&lt;teamId&gt;&userId=&lt;userId&gt;&response=interested&page=1&limit=50
+Authorization: Bearer &lt;token&gt;</pre>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-emerald-600 text-white">GET</span>
+              <code class="text-white font-mono text-sm">/api/coldcall/report/teams</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + coldcall.read</span>
+            </div>
+            <pre class="text-xs text-yellow-200">GET /api/coldcall/report/teams?batchId=&lt;batchId&gt;
+Authorization: Bearer &lt;token&gt;</pre>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-emerald-600 text-white">GET</span>
+              <code class="text-white font-mono text-sm">/api/coldcall/report/agents</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + coldcall.read</span>
+            </div>
+            <pre class="text-xs text-yellow-200">GET /api/coldcall/report/agents?teamId=&lt;teamId&gt;
+Authorization: Bearer &lt;token&gt;</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-4">Analytics</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-sm text-gray-300 space-y-4">
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-emerald-600 text-white">GET</span>
+              <code class="text-white font-mono text-sm">/api/coldcall/analytics/agents/:userId</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + coldcall.read</span>
+            </div>
+            <pre class="text-xs text-yellow-200">GET /api/coldcall/analytics/agents/&lt;userId&gt;?from=2026-03-10T00:00:00.000Z
+Authorization: Bearer &lt;token&gt;</pre>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-emerald-600 text-white">GET</span>
+              <code class="text-white font-mono text-sm">/api/coldcall/analytics/teams/:teamId</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + coldcall.read</span>
+            </div>
+            <pre class="text-xs text-yellow-200">GET /api/coldcall/analytics/teams/&lt;teamId&gt;?from=2026-03-10T00:00:00.000Z
+Authorization: Bearer &lt;token&gt;</pre>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-emerald-600 text-white">GET</span>
+              <code class="text-white font-mono text-sm">/api/coldcall/analytics/leaderboard</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + coldcall.read</span>
+            </div>
+            <pre class="text-xs text-yellow-200">GET /api/coldcall/analytics/leaderboard?metric=conversions&days=7&top=10
+Authorization: Bearer &lt;token&gt;</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-4">Quota (Admin)</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-sm text-gray-300 space-y-4">
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-indigo-600 text-white">POST</span>
+              <code class="text-white font-mono text-sm">/api/coldcall/quota</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + coldcall.admin</span>
+            </div>
+            <pre class="text-xs text-yellow-200">POST /api/coldcall/quota
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{ "teamId": "&lt;teamId&gt;", "period": "daily", "metric": "conversions", "target": 10 }</pre>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-emerald-600 text-white">GET</span>
+              <code class="text-white font-mono text-sm">/api/coldcall/quota/:teamId</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + coldcall.read</span>
+            </div>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-emerald-600 text-white">GET</span>
+              <code class="text-white font-mono text-sm">/api/coldcall/quota/:teamId/progress</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + coldcall.read</span>
+            </div>
+            <pre class="text-xs text-yellow-200">GET /api/coldcall/quota/&lt;teamId&gt;/progress?period=daily
+Authorization: Bearer &lt;token&gt;</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-4">Workers (BullMQ) — required for retry & auto-unlock</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-sm text-gray-300 space-y-4">
+          <div class="bg-amber-950 border border-amber-800 rounded-lg p-4 text-amber-100">
+            <p class="font-semibold mb-2">Important</p>
+            <ul class="list-disc list-inside space-y-1">
+              <li>API server only schedules jobs (queues). Workers must run separately to process them.</li>
+              <li>Queues use Redis; ensure Redis is configured and reachable.</li>
+            </ul>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4 space-y-2">
+            <p class="font-semibold text-white">Auto-unlock</p>
+            <ul class="list-disc list-inside text-gray-300 space-y-1">
+              <li>Queue scheduler: <code>src/modules/cold-call/queue/auto-unlock.queue.ts</code> (repeats every 60s)</li>
+              <li>Worker: <code>src/modules/cold-call/worker/auto-unlock.worker.ts</code></li>
+            </ul>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4 space-y-2">
+            <p class="font-semibold text-white">Retry</p>
+            <ul class="list-disc list-inside text-gray-300 space-y-1">
+              <li>Queue: <code>src/modules/cold-call/queue/retry.queue.ts</code></li>
+              <li>Worker: <code>src/modules/cold-call/worker/retry.worker.ts</code></li>
+              <li>Rules: <code>src/modules/cold-call/retry/retry.service.ts</code> (+ retry-rules)</li>
+            </ul>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4 space-y-2">
+            <p class="font-semibold text-white">Daily aggregation (analytics)</p>
+            <ul class="list-disc list-inside text-gray-300 space-y-1">
+              <li>Scheduler: <code>src/modules/cold-call/analytics/scheduler/aggregate.queue.ts</code> (cron: 00:05 UTC)</li>
+              <li>Worker: <code>src/modules/cold-call/analytics/workers/aggregate.worker.ts</code></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-4">RBAC: Give ColdCall access to employees</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-sm text-gray-300 space-y-4">
+          <div class="bg-indigo-950 border border-indigo-800 rounded-lg p-4 text-indigo-100">
+            <p class="font-semibold mb-2">ColdCall access is permission-based (not superadmin-only)</p>
+            <ul class="list-disc list-inside space-y-1">
+              <li>Anyone can upload/distribute/call if their role contains the required permission keys.</li>
+              <li>Frontend should provide an Admin screen to create roles and assign permissions/users.</li>
+            </ul>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <p class="font-semibold text-white mb-2">ColdCall permission keys (use these in UI)</p>
+            <ul class="list-disc list-inside text-gray-300 space-y-1">
+              <li><code>coldcall.upload</code> — upload Excel/CSV → create batches</li>
+              <li><code>coldcall.distribute</code> — distribute batch entries to teams</li>
+              <li><code>coldcall.call</code> — agent workflow (pull/attempt/complete)</li>
+              <li><code>coldcall.read</code> — reports + analytics read</li>
+              <li><code>coldcall.assign</code> — reassign entries</li>
+              <li><code>coldcall.admin</code> — quota admin actions</li>
+            </ul>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <p class="font-semibold text-white mb-2">RBAC endpoints (Admin Panel)</p>
+            <p class="text-gray-400 text-xs mb-3">
+              Base path: <code>/api/rbac</code> (all require JWT + role/permission permissions).
+            </p>
+            <ul class="list-disc list-inside text-gray-300 space-y-2">
+              <li>
+                <strong class="text-white">List permissions (for checkboxes)</strong>:
+                <code>GET /api/rbac/permissions</code> (needs <code>permission.read</code>)
+              </li>
+              <li>
+                <strong class="text-white">Create/List roles</strong>:
+                <code>POST /api/rbac/roles</code>, <code>GET /api/rbac/roles</code> (needs <code>role.write</code>/<code>role.read</code>)
+              </li>
+              <li>
+                <strong class="text-white">Assign permission to role</strong>:
+                <code>POST /api/rbac/roles/:id/permissions</code> (needs <code>role.write</code>)
+              </li>
+              <li>
+                <strong class="text-white">Remove permission from role</strong>:
+                <code>DELETE /api/rbac/roles/:id/permissions/:permId</code> (needs <code>role.write</code>)
+              </li>
+              <li>
+                <strong class="text-white">Get role permissions</strong>:
+                <code>GET /api/rbac/roles/:id/permissions</code> (needs <code>role.read</code>)
+              </li>
+              <li>
+                <strong class="text-white">Assign role to a user</strong>:
+                <code>POST /api/rbac/roles/assign-to-user</code> (needs <code>role.write</code>)
+              </li>
+              <li>
+                <strong class="text-white">Remove role from a user</strong>:
+                <code>DELETE /api/rbac/roles/user/:userId/role/:roleId</code> (needs <code>role.write</code>)
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-4">Common errors (and fixes)</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-sm text-gray-300 space-y-4">
+          <div class="bg-gray-950 rounded-lg p-4">
+            <p class="font-semibold text-white mb-2">1) “Missing permission: coldcall.call”</p>
+            <ul class="list-disc list-inside space-y-1">
+              <li>Meaning: user’s role does not include <code>coldcall.call</code>.</li>
+              <li>Fix: assign permission via RBAC endpoints above (role → permissions → user).</li>
+            </ul>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <p class="font-semibold text-white mb-2">2) “no-team-membership” (pull returns 400)</p>
+            <ul class="list-disc list-inside space-y-1">
+              <li>Meaning: user is not a member of any team, so backend cannot choose entries for them.</li>
+              <li>Fix: add user to a team (TeamMember). After that, <code>pull</code> can work.</li>
+            </ul>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <p class="font-semibold text-white mb-2">3) “no-available-entry”</p>
+            <ul class="list-disc list-inside space-y-1">
+              <li>Meaning: there are no pending entries assigned to your teams.</li>
+              <li>Fix: ensure batch is distributed to the same teams (<code>assignedTeamId</code> matches your teamIds), and entries are <code>pending</code>.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-4">Endpoint summary</h2>
+        <div class="overflow-x-auto bg-gray-900 border border-gray-800 rounded-xl">
+          <table class="text-sm w-full">
+            <thead>
+              <tr class="text-gray-500 border-b border-gray-700 text-left bg-gray-950">
+                <th class="py-3 px-4">Method</th>
+                <th class="py-3 px-4">Path</th>
+                <th class="py-3 px-4">Permission</th>
+                <th class="py-3 px-4">Purpose</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800">
+              <tr><td class="py-2 px-4 font-mono">POST</td><td class="py-2 px-4 font-mono text-indigo-300">/api/coldcall/upload</td><td class="py-2 px-4">coldcall.upload</td><td class="py-2 px-4">Upload file → create batch & entries</td></tr>
+              <tr><td class="py-2 px-4 font-mono">GET</td><td class="py-2 px-4 font-mono text-indigo-300">/api/coldcall/batches/:id/preview</td><td class="py-2 px-4">coldcall.read</td><td class="py-2 px-4">Dry-run distribution preview</td></tr>
+              <tr><td class="py-2 px-4 font-mono">POST</td><td class="py-2 px-4 font-mono text-indigo-300">/api/coldcall/batches/:id/distribute</td><td class="py-2 px-4">coldcall.distribute</td><td class="py-2 px-4">Assign entries to teams</td></tr>
+              <tr><td class="py-2 px-4 font-mono">POST</td><td class="py-2 px-4 font-mono text-indigo-300">/api/coldcall/pull</td><td class="py-2 px-4">coldcall.call</td><td class="py-2 px-4">Agent gets next entry (locks it)</td></tr>
+              <tr><td class="py-2 px-4 font-mono">POST</td><td class="py-2 px-4 font-mono text-indigo-300">/api/coldcall/pull/entries/:id/refresh-lock</td><td class="py-2 px-4">coldcall.call</td><td class="py-2 px-4">Extend lock TTL</td></tr>
+              <tr><td class="py-2 px-4 font-mono">POST</td><td class="py-2 px-4 font-mono text-indigo-300">/api/coldcall/pull/entries/:id/release</td><td class="py-2 px-4">coldcall.call</td><td class="py-2 px-4">Release lock, return to pending</td></tr>
+              <tr><td class="py-2 px-4 font-mono">POST</td><td class="py-2 px-4 font-mono text-indigo-300">/api/coldcall/pull/entries/:id/attempt</td><td class="py-2 px-4">coldcall.call</td><td class="py-2 px-4">Log attempt (no finalize)</td></tr>
+              <tr><td class="py-2 px-4 font-mono">POST</td><td class="py-2 px-4 font-mono text-indigo-300">/api/coldcall/pull/entries/:id/complete</td><td class="py-2 px-4">coldcall.call</td><td class="py-2 px-4">Finalize + optional create lead</td></tr>
+              <tr><td class="py-2 px-4 font-mono">POST</td><td class="py-2 px-4 font-mono text-indigo-300">/api/coldcall/pull/entries/:id/reassign</td><td class="py-2 px-4">coldcall.assign</td><td class="py-2 px-4">Reassign entry (admin/team lead)</td></tr>
+              <tr><td class="py-2 px-4 font-mono">GET</td><td class="py-2 px-4 font-mono text-indigo-300">/api/coldcall/pull/my-tasks</td><td class="py-2 px-4">coldcall.call</td><td class="py-2 px-4">Agent dashboard feed</td></tr>
+              <tr><td class="py-2 px-4 font-mono">GET</td><td class="py-2 px-4 font-mono text-indigo-300">/api/coldcall/report/batches/:id/summary</td><td class="py-2 px-4">coldcall.read</td><td class="py-2 px-4">Batch summary</td></tr>
+              <tr><td class="py-2 px-4 font-mono">GET</td><td class="py-2 px-4 font-mono text-indigo-300">/api/coldcall/report/entries</td><td class="py-2 px-4">coldcall.read</td><td class="py-2 px-4">Filterable entries list</td></tr>
+              <tr><td class="py-2 px-4 font-mono">GET</td><td class="py-2 px-4 font-mono text-indigo-300">/api/coldcall/report/teams</td><td class="py-2 px-4">coldcall.read</td><td class="py-2 px-4">Team report</td></tr>
+              <tr><td class="py-2 px-4 font-mono">GET</td><td class="py-2 px-4 font-mono text-indigo-300">/api/coldcall/report/agents</td><td class="py-2 px-4">coldcall.read</td><td class="py-2 px-4">Agent report</td></tr>
+              <tr><td class="py-2 px-4 font-mono">GET</td><td class="py-2 px-4 font-mono text-indigo-300">/api/coldcall/analytics/agents/:userId</td><td class="py-2 px-4">coldcall.read</td><td class="py-2 px-4">Agent performance</td></tr>
+              <tr><td class="py-2 px-4 font-mono">GET</td><td class="py-2 px-4 font-mono text-indigo-300">/api/coldcall/analytics/teams/:teamId</td><td class="py-2 px-4">coldcall.read</td><td class="py-2 px-4">Team performance</td></tr>
+              <tr><td class="py-2 px-4 font-mono">GET</td><td class="py-2 px-4 font-mono text-indigo-300">/api/coldcall/analytics/leaderboard</td><td class="py-2 px-4">coldcall.read</td><td class="py-2 px-4">Leaderboard</td></tr>
+              <tr><td class="py-2 px-4 font-mono">POST</td><td class="py-2 px-4 font-mono text-indigo-300">/api/coldcall/quota</td><td class="py-2 px-4">coldcall.admin</td><td class="py-2 px-4">Set quota</td></tr>
+              <tr><td class="py-2 px-4 font-mono">GET</td><td class="py-2 px-4 font-mono text-indigo-300">/api/coldcall/quota/:teamId</td><td class="py-2 px-4">coldcall.read</td><td class="py-2 px-4">List quotas</td></tr>
+              <tr><td class="py-2 px-4 font-mono">GET</td><td class="py-2 px-4 font-mono text-indigo-300">/api/coldcall/quota/:teamId/progress</td><td class="py-2 px-4">coldcall.read</td><td class="py-2 px-4">Quota progress</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer class="text-xs text-gray-500 mt-10">
+        <p>
+          File: <code class="text-indigo-200">apps/backend/coldcall.html</code>
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>
+

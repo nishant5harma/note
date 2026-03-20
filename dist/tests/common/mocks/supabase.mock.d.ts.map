@@ -1,0 +1,1 @@
+{"version":3,"file":"supabase.mock.d.ts","sourceRoot":"","sources":["../../../../src/tests/common/mocks/supabase.mock.ts"],"names":[],"mappings":"AAIA,UAAU,YAAY;IACpB,MAAM,EAAE,GAAG,CAAC;IACZ,YAAY,EAAE,GAAG,CAAC;CACnB;AAGD,eAAO,MAAM,YAAY,EAAE,YAG1B,CAAC"}

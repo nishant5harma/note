@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CRM Backend — HR Module</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-950 text-gray-200">
+    <div class="max-w-6xl mx-auto px-6 py-10">
+      <header class="mb-10">
+        <h1 class="text-3xl font-extrabold text-white">HR Module</h1>
+        <p class="text-gray-400 mt-2">
+          Complete guide for HR module — Attendance, Location Tracking, Device Management, and Consent. All endpoints, permissions, and flows.
+        </p>
+        <div class="mt-4 bg-gray-900 border border-gray-800 rounded-xl p-4 text-sm text-gray-300">
+          <p><strong class="text-white">Base path:</strong> <code class="text-indigo-200">/api/hr</code></p>
+          <p class="mt-1"><strong class="text-white">Auth:</strong> All HR endpoints require <code class="text-indigo-200">JWT (requireAuth)</code> + per-route RBAC permission.</p>
+          <p class="mt-1"><strong class="text-white">Mounted at:</strong> <code class="text-indigo-200">AppRouter.use("/hr", requireAuth, HrRouter)</code></p>
+        </div>
+      </header>
+
+      <!-- Modules overview -->
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-4">4 Sub-modules</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <p class="font-bold text-white mb-1">Attendance</p>
+            <p class="text-sm text-gray-400">Employee checkin/checkout + admin list. <code>/api/hr/attendance</code></p>
+            <p class="text-xs text-indigo-300 mt-1">Permissions: <code>attendance.self</code>, <code>attendance.read</code></p>
+          </div>
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <p class="font-bold text-white mb-1">Location Requests</p>
+            <p class="text-sm text-gray-400">Supervisor requests employee location on-demand (ephemeral, Redis-stored). <code>/api/hr/location-requests</code></p>
+            <p class="text-xs text-indigo-300 mt-1">Permissions: <code>location.request</code>, <code>location.read</code></p>
+          </div>
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <p class="font-bold text-white mb-1">Device Management</p>
+            <p class="text-sm text-gray-400">Register/unregister push notification devices. <code>/api/hr/devices</code></p>
+            <p class="text-xs text-indigo-300 mt-1">Permissions: <code>device.register</code>, <code>device.unregister</code>, <code>device.read</code></p>
+          </div>
+          <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+            <p class="font-bold text-white mb-1">Consent</p>
+            <p class="text-sm text-gray-400">Create/revoke user consent for location tracking, photo, terms. <code>/api/hr/consent</code></p>
+            <p class="text-xs text-indigo-300 mt-1">Permissions: <code>consent.write</code>, <code>consent.read</code></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- HR Permissions -->
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-4">All HR Permissions</h2>
+        <div class="overflow-x-auto bg-gray-900 border border-gray-800 rounded-xl">
+          <table class="text-sm w-full">
+            <thead>
+              <tr class="text-gray-500 border-b border-gray-700 text-left bg-gray-950">
+                <th class="py-3 px-4">Permission Key</th>
+                <th class="py-3 px-4">Module</th>
+                <th class="py-3 px-4">Who should have it</th>
+                <th class="py-3 px-4">What it allows</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800 text-xs">
+              <tr><td class="py-2 px-4 font-mono text-indigo-300">attendance.self</td><td class="py-2 px-4">Attendance</td><td class="py-2 px-4">All employees</td><td class="py-2 px-4">Mark own checkin / checkout</td></tr>
+              <tr><td class="py-2 px-4 font-mono text-indigo-300">attendance.read</td><td class="py-2 px-4">Attendance</td><td class="py-2 px-4">Manager / HR / Admin</td><td class="py-2 px-4">List all attendance records (with filters)</td></tr>
+              <tr><td class="py-2 px-4 font-mono text-indigo-300">location.request</td><td class="py-2 px-4">Location</td><td class="py-2 px-4">Supervisor / Manager</td><td class="py-2 px-4">Create on-demand location request to a user</td></tr>
+              <tr><td class="py-2 px-4 font-mono text-indigo-300">location.read</td><td class="py-2 px-4">Location</td><td class="py-2 px-4">Supervisor / Manager</td><td class="py-2 px-4">Read location request result (ephemeral)</td></tr>
+              <tr><td class="py-2 px-4 font-mono text-indigo-300">location.audit</td><td class="py-2 px-4">Location</td><td class="py-2 px-4">Admin / HR</td><td class="py-2 px-4">View location access audit records</td></tr>
+              <tr><td class="py-2 px-4 font-mono text-indigo-300">device.register</td><td class="py-2 px-4">Device</td><td class="py-2 px-4">All employees (mobile app)</td><td class="py-2 px-4">Register / update push notification device</td></tr>
+              <tr><td class="py-2 px-4 font-mono text-indigo-300">device.unregister</td><td class="py-2 px-4">Device</td><td class="py-2 px-4">All employees</td><td class="py-2 px-4">Remove device / push token</td></tr>
+              <tr><td class="py-2 px-4 font-mono text-indigo-300">device.read</td><td class="py-2 px-4">Device</td><td class="py-2 px-4">All employees / Admin</td><td class="py-2 px-4">List own registered devices</td></tr>
+              <tr><td class="py-2 px-4 font-mono text-indigo-300">consent.write</td><td class="py-2 px-4">Consent</td><td class="py-2 px-4">All employees</td><td class="py-2 px-4">Create or revoke consent entries</td></tr>
+              <tr><td class="py-2 px-4 font-mono text-indigo-300">consent.read</td><td class="py-2 px-4">Consent</td><td class="py-2 px-4">All employees / Admin</td><td class="py-2 px-4">Read own consent records</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Attendance -->
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-4">Attendance Endpoints</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-sm text-gray-300 space-y-4">
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-indigo-600 text-white">POST</span>
+              <code class="text-white font-mono text-sm">/api/hr/attendance/checkin</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + attendance.self</span>
+            </div>
+            <pre class="text-xs text-yellow-200">POST /api/hr/attendance/checkin
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{
+  "photoRef": "https://storage/selfie.jpg",  // optional
+  "latitude": 19.076,
+  "longitude": 72.877,
+  "accuracy": 10,
+  "locationTs": "2026-03-18T09:00:00.000Z",  // optional ISO string
+  "note": "On time"
+}</pre>
+            <p class="text-xs text-gray-400 mt-2">Only 1 checkin per day per user allowed. Creates <code>Attendance</code>, <code>LocationLog</code>, <code>LocationAccessAudit</code> + <code>AuditLog</code> in one transaction.</p>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-indigo-600 text-white">POST</span>
+              <code class="text-white font-mono text-sm">/api/hr/attendance/checkout</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + attendance.self</span>
+            </div>
+            <pre class="text-xs text-yellow-200">POST /api/hr/attendance/checkout
+Authorization: Bearer &lt;token&gt;</pre>
+            <p class="text-xs text-gray-400 mt-2">Sets <code>checkoutAt</code> on today's attendance. Only 1 checkout per day. Must have checked in first.</p>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-emerald-600 text-white">GET</span>
+              <code class="text-white font-mono text-sm">/api/hr/attendance</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + attendance.read</span>
+            </div>
+            <pre class="text-xs text-yellow-200">GET /api/hr/attendance?userId=&lt;id&gt;&teamId=&lt;id&gt;&from=2026-03-01&to=2026-03-31&page=1&limit=100
+Authorization: Bearer &lt;token&gt;</pre>
+            <p class="text-xs text-gray-400 mt-2">Admin/Manager can filter by user, team, date range. Returns rows with user + team info.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Location Requests -->
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-4">Location Request Endpoints</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-sm text-gray-300 space-y-4">
+          <div class="bg-indigo-950 border border-indigo-800 rounded-lg p-4 text-indigo-100 text-xs">
+            <p class="font-semibold mb-1">Flow</p>
+            <ol class="list-decimal list-inside space-y-1">
+              <li>Supervisor creates request → employee device gets real-time push + socket event.</li>
+              <li>Employee app responds with GPS coordinates.</li>
+              <li>Coordinates stored ephemerally in Redis (TTL ~60s).</li>
+              <li>Supervisor reads result once (one-time read, then deleted from Redis).</li>
+            </ol>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-indigo-600 text-white">POST</span>
+              <code class="text-white font-mono text-sm">/api/hr/location-requests</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + location.request</span>
+            </div>
+            <pre class="text-xs text-yellow-200">POST /api/hr/location-requests
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{
+  "targetUserId": "&lt;employeeId&gt;",
+  "expiresInSeconds": 60,
+  "note": "Client visit verification"
+}</pre>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-indigo-600 text-white">POST</span>
+              <code class="text-white font-mono text-sm">/api/hr/location-requests/:id/respond</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT (target user only)</span>
+            </div>
+            <pre class="text-xs text-yellow-200">POST /api/hr/location-requests/&lt;requestId&gt;/respond
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{
+  "latitude": 19.076,
+  "longitude": 72.877,
+  "accuracy": 8,
+  "recordedAt": "2026-03-18T10:05:00.000Z"
+}</pre>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-emerald-600 text-white">GET</span>
+              <code class="text-white font-mono text-sm">/api/hr/location-requests/:id/result</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + location.read (requester only)</span>
+            </div>
+            <pre class="text-xs text-yellow-200">GET /api/hr/location-requests/&lt;requestId&gt;/result
+Authorization: Bearer &lt;token&gt;</pre>
+            <p class="text-xs text-gray-400 mt-2">Returns <code>{ coords: { latitude, longitude, accuracy, recordedAt } }</code>. One-time read (deleted from Redis after).</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Device Management -->
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-4">Device Management Endpoints</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-sm text-gray-300 space-y-4">
+          <div class="bg-amber-950 border border-amber-800 rounded-lg p-4 text-amber-100 text-xs">
+            Device registration is needed for <strong>push notifications</strong> (location fetch signal, lead assigned, followup, etc.).
+            Call register device on app startup/login.
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-indigo-600 text-white">POST</span>
+              <code class="text-white font-mono text-sm">/api/hr/devices/register</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + device.register</span>
+            </div>
+            <pre class="text-xs text-yellow-200">POST /api/hr/devices/register
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{
+  "deviceId": "unique-device-id",
+  "platform": "android",        // or "ios"
+  "pushToken": "ExponentPushToken[xxx]",
+  "meta": {}
+}</pre>
+            <p class="text-xs text-gray-400 mt-2">Upserts device row by <code>deviceId</code> or <code>pushToken</code>. Call on every app launch after login.</p>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-indigo-600 text-white">POST</span>
+              <code class="text-white font-mono text-sm">/api/hr/devices/unregister</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + device.unregister</span>
+            </div>
+            <pre class="text-xs text-yellow-200">POST /api/hr/devices/unregister
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{ "deviceId": "unique-device-id" }  // or pushToken</pre>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-emerald-600 text-white">GET</span>
+              <code class="text-white font-mono text-sm">/api/hr/devices</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + device.read</span>
+            </div>
+            <pre class="text-xs text-yellow-200">GET /api/hr/devices
+Authorization: Bearer &lt;token&gt;</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Consent -->
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-4">Consent Endpoints</h2>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-sm text-gray-300 space-y-4">
+          <div class="bg-gray-950 rounded-lg p-4">
+            <p class="font-semibold text-white mb-2">Consent types</p>
+            <ul class="list-disc list-inside text-gray-300 space-y-1 text-xs">
+              <li><code>LOCATION</code> — employee consents to location tracking</li>
+              <li><code>PHOTO</code> — employee consents to selfie/photo capture</li>
+              <li><code>TERMS</code> — employee accepts terms of service</li>
+            </ul>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-indigo-600 text-white">POST</span>
+              <code class="text-white font-mono text-sm">/api/hr/consent</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + consent.write</span>
+            </div>
+            <pre class="text-xs text-yellow-200">POST /api/hr/consent
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{ "type": "LOCATION", "version": "1.0", "meta": {} }</pre>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-indigo-600 text-white">POST</span>
+              <code class="text-white font-mono text-sm">/api/hr/consent/revoke</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + consent.write</span>
+            </div>
+            <pre class="text-xs text-yellow-200">POST /api/hr/consent/revoke
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{ "type": "LOCATION" }  // or { "id": "&lt;consentId&gt;" }</pre>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs font-bold px-3 py-1 rounded-full font-mono bg-emerald-600 text-white">GET</span>
+              <code class="text-white font-mono text-sm">/api/hr/consent</code>
+              <span class="ml-auto text-xs text-gray-500 font-mono">JWT + consent.read</span>
+            </div>
+            <pre class="text-xs text-yellow-200">GET /api/hr/consent
+Authorization: Bearer &lt;token&gt;</pre>
+          </div>
+        </div>
+      </section>
+
+      <!-- Endpoint summary -->
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-4">Endpoint Summary</h2>
+        <div class="overflow-x-auto bg-gray-900 border border-gray-800 rounded-xl">
+          <table class="text-sm w-full">
+            <thead>
+              <tr class="text-gray-500 border-b border-gray-700 text-left bg-gray-950">
+                <th class="py-3 px-4">Method</th>
+                <th class="py-3 px-4">Path</th>
+                <th class="py-3 px-4">Permission</th>
+                <th class="py-3 px-4">Purpose</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800 text-xs">
+              <tr><td class="py-2 px-4 font-mono">POST</td><td class="py-2 px-4 font-mono text-indigo-300">/api/hr/attendance/checkin</td><td class="py-2 px-4">attendance.self</td><td class="py-2 px-4">Employee marks checkin</td></tr>
+              <tr><td class="py-2 px-4 font-mono">POST</td><td class="py-2 px-4 font-mono text-indigo-300">/api/hr/attendance/checkout</td><td class="py-2 px-4">attendance.self</td><td class="py-2 px-4">Employee marks checkout</td></tr>
+              <tr><td class="py-2 px-4 font-mono">GET</td><td class="py-2 px-4 font-mono text-indigo-300">/api/hr/attendance</td><td class="py-2 px-4">attendance.read</td><td class="py-2 px-4">Admin/Manager view attendance</td></tr>
+              <tr><td class="py-2 px-4 font-mono">POST</td><td class="py-2 px-4 font-mono text-indigo-300">/api/hr/location-requests</td><td class="py-2 px-4">location.request</td><td class="py-2 px-4">Supervisor requests employee location</td></tr>
+              <tr><td class="py-2 px-4 font-mono">POST</td><td class="py-2 px-4 font-mono text-indigo-300">/api/hr/location-requests/:id/respond</td><td class="py-2 px-4">JWT (target user only)</td><td class="py-2 px-4">Employee responds with GPS</td></tr>
+              <tr><td class="py-2 px-4 font-mono">GET</td><td class="py-2 px-4 font-mono text-indigo-300">/api/hr/location-requests/:id/result</td><td class="py-2 px-4">location.read</td><td class="py-2 px-4">Supervisor reads location result</td></tr>
+              <tr><td class="py-2 px-4 font-mono">POST</td><td class="py-2 px-4 font-mono text-indigo-300">/api/hr/devices/register</td><td class="py-2 px-4">device.register</td><td class="py-2 px-4">Register push device</td></tr>
+              <tr><td class="py-2 px-4 font-mono">POST</td><td class="py-2 px-4 font-mono text-indigo-300">/api/hr/devices/unregister</td><td class="py-2 px-4">device.unregister</td><td class="py-2 px-4">Remove push device</td></tr>
+              <tr><td class="py-2 px-4 font-mono">GET</td><td class="py-2 px-4 font-mono text-indigo-300">/api/hr/devices</td><td class="py-2 px-4">device.read</td><td class="py-2 px-4">List own devices</td></tr>
+              <tr><td class="py-2 px-4 font-mono">POST</td><td class="py-2 px-4 font-mono text-indigo-300">/api/hr/consent</td><td class="py-2 px-4">consent.write</td><td class="py-2 px-4">Create consent</td></tr>
+              <tr><td class="py-2 px-4 font-mono">POST</td><td class="py-2 px-4 font-mono text-indigo-300">/api/hr/consent/revoke</td><td class="py-2 px-4">consent.write</td><td class="py-2 px-4">Revoke consent</td></tr>
+              <tr><td class="py-2 px-4 font-mono">GET</td><td class="py-2 px-4 font-mono text-indigo-300">/api/hr/consent</td><td class="py-2 px-4">consent.read</td><td class="py-2 px-4">List consents</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ===== SOCKET.IO SECTION ===== -->
+      <section class="mb-10">
+        <h2 class="text-2xl font-bold text-white mb-2">Real-time — Socket.IO</h2>
+        <p class="text-sm text-gray-400 mb-6">
+          The backend runs a Socket.IO server alongside the HTTP server. It is used for real-time bidirectional communication — primarily for <strong class="text-white">location requests</strong>, <strong class="text-white">push-style notifications</strong>, and future presence tracking. When a user is offline, the system falls back to <strong class="text-white">FCM (Firebase)</strong> or <strong class="text-white">WebPush (VAPID)</strong> via registered devices.
+        </p>
+
+        <!-- Architecture overview -->
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6 text-sm text-gray-300 space-y-4">
+          <p class="font-bold text-white text-base">Architecture Overview</p>
+          <div class="bg-gray-950 rounded-lg p-4 text-xs">
+            <pre class="text-indigo-200 leading-relaxed">
+Mobile App / Browser
+      │
+      │  1. HTTP handshake: Authorization: Bearer &lt;JWT&gt;  (or auth.token)
+      ▼
+Socket.IO Server (authSocketMiddleware)
+      │  verifies JWT → loads user + permissions from DB
+      │  attaches socket.user, socket.data.userId, socket.permissions
+      ▼
+On "connect" event:
+  socket.on("register", { userId }) → socket.join(userId)
+                                     → userSocketMap.set(userId, socketIds)
+      │
+      │  Server can now do: io.to(userId).emit("event", payload)
+      ▼
+All devices logged in as the same user receive the event simultaneously</pre>
+          </div>
+        </div>
+
+        <!-- Connection + Auth -->
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6 text-sm text-gray-300 space-y-4">
+          <p class="font-bold text-white text-base">1 — Connect &amp; Authenticate</p>
+          <p class="text-xs text-gray-400">Pass the JWT in the Socket.IO handshake. Two ways are supported:</p>
+          <pre class="bg-gray-950 rounded-lg p-4 text-xs text-yellow-200">// Option A — via auth object (recommended for mobile/React Native)
+const socket = io("https://api.yourcrm.com", {
+  auth: { token: "eyJhbGci..." }   // JWT access token
+});
+
+// Option B — via Authorization header (web browsers)
+const socket = io("https://api.yourcrm.com", {
+  extraHeaders: { Authorization: "Bearer eyJhbGci..." }
+});</pre>
+          <p class="text-xs text-gray-400 mt-2">
+            The server middleware (<code class="text-indigo-300">authSocketMiddleware</code>) reads <code>socket.handshake.auth.token</code> or <code>Authorization</code> header, verifies the JWT, loads the user and their permissions, then stores them on the socket: <code>socket.data.userId</code>, <code>socket.permissions</code>.
+          </p>
+        </div>
+
+        <!-- Register event -->
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6 text-sm text-gray-300 space-y-4">
+          <p class="font-bold text-white text-base">2 — Register (Join User Room)</p>
+          <p class="text-xs text-gray-400">After connecting, the client <strong class="text-white">must</strong> emit a <code class="text-indigo-300">register</code> event so the server can route messages to this user's room. Without this step no targeted events will be delivered.</p>
+          <pre class="bg-gray-950 rounded-lg p-4 text-xs text-yellow-200">socket.on("connect", () => {
+  // userId is ignored if JWT auth was used (server uses auth identity)
+  socket.emit("register", { userId: currentUser.id }, (ack) => {
+    console.log(ack); // { status: "ok", userId: "..." }
+  });
+});</pre>
+          <div class="bg-indigo-950 border border-indigo-800 rounded-lg p-3 text-indigo-200 text-xs mt-2">
+            <strong>Security note:</strong> If JWT auth was provided, the server ignores the <code>userId</code> in the payload and uses the identity from the token. The client-supplied userId is only used as a fallback when no auth token is present (unauthenticated sockets).
+          </div>
+        </div>
+
+        <!-- Events to listen -->
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6 text-sm text-gray-300">
+          <p class="font-bold text-white text-base mb-4">3 — Events to Listen (Server → Client)</p>
+          <div class="overflow-x-auto">
+            <table class="text-xs w-full">
+              <thead>
+                <tr class="text-gray-500 border-b border-gray-700 text-left bg-gray-950">
+                  <th class="py-2 px-4">Event Name</th>
+                  <th class="py-2 px-4">Who receives it</th>
+                  <th class="py-2 px-4">When fired</th>
+                  <th class="py-2 px-4">Payload shape</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-800">
+                <tr>
+                  <td class="py-2 px-4 font-mono text-indigo-300">location.fetch_request</td>
+                  <td class="py-2 px-4">Target employee</td>
+                  <td class="py-2 px-4">Supervisor calls <code>POST /api/hr/location-requests</code></td>
+                  <td class="py-2 px-4"><code>{ type, requestId, silent, ts }</code></td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 font-mono text-indigo-300">location.responded</td>
+                  <td class="py-2 px-4">Requesting supervisor</td>
+                  <td class="py-2 px-4">Employee responds via <code>POST /api/hr/location-requests/:id/respond</code></td>
+                  <td class="py-2 px-4"><code>{ requestId, coords: { latitude, longitude, accuracy, recordedAt }, responderId }</code></td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 font-mono text-indigo-300">LOCATION_FETCH</td>
+                  <td class="py-2 px-4">Target employee (push fallback)</td>
+                  <td class="py-2 px-4">Same as above — also sent as FCM/WebPush data payload</td>
+                  <td class="py-2 px-4"><code>{ type: "LOCATION_FETCH", requestId, silent: true, ts }</code></td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 font-mono text-indigo-300">LOCATION_RESPONSE</td>
+                  <td class="py-2 px-4">Requester supervisor (push fallback)</td>
+                  <td class="py-2 px-4">Employee responds — also sent as FCM/WebPush to supervisor</td>
+                  <td class="py-2 px-4"><code>{ type: "LOCATION_RESPONSE", requestId, coords, responderId }</code></td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 font-mono text-indigo-300">push</td>
+                  <td class="py-2 px-4">Any targeted user</td>
+                  <td class="py-2 px-4">Generic push via <code>pushToUser()</code> internally</td>
+                  <td class="py-2 px-4">Arbitrary <code>{ type, ...payload }</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mt-5 space-y-3">
+            <p class="text-xs text-gray-400 font-semibold text-white">Client-side listener examples:</p>
+            <pre class="bg-gray-950 rounded-lg p-4 text-xs text-yellow-200">// Employee: listen for supervisor location requests
+socket.on("location.fetch_request", async (data) => {
+  // { type: "LOCATION_FETCH", requestId, silent, ts }
+  const coords = await getCurrentGPS();  // get device GPS
+  await api.post(`/api/hr/location-requests/${data.requestId}/respond`, {
+    latitude: coords.lat,
+    longitude: coords.lng,
+    accuracy: coords.accuracy,
+    recordedAt: new Date().toISOString(),
+  });
+});
+
+// Supervisor: listen for employee response
+socket.on("location.responded", (data) => {
+  // { requestId, coords: { latitude, longitude, accuracy, recordedAt }, responderId }
+  showLocationOnMap(data.coords);
+});
+
+// Generic push notification handler
+socket.on("push", (data) => {
+  showInAppNotification(data);
+});</pre>
+          </div>
+        </div>
+
+        <!-- Events to emit -->
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6 text-sm text-gray-300">
+          <p class="font-bold text-white text-base mb-4">4 — Events to Emit (Client → Server)</p>
+          <div class="overflow-x-auto">
+            <table class="text-xs w-full">
+              <thead>
+                <tr class="text-gray-500 border-b border-gray-700 text-left bg-gray-950">
+                  <th class="py-2 px-4">Event Name</th>
+                  <th class="py-2 px-4">When to emit</th>
+                  <th class="py-2 px-4">Payload</th>
+                  <th class="py-2 px-4">Notes</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-800">
+                <tr>
+                  <td class="py-2 px-4 font-mono text-indigo-300">register</td>
+                  <td class="py-2 px-4">Immediately after <code>connect</code></td>
+                  <td class="py-2 px-4"><code>{ userId }</code></td>
+                  <td class="py-2 px-4">Required for server to route events to this user. Ack: <code>{ status, userId }</code></td>
+                </tr>
+                <tr>
+                  <td class="py-2 px-4 font-mono text-indigo-300">presence.ping</td>
+                  <td class="py-2 px-4">Periodic heartbeat (optional)</td>
+                  <td class="py-2 px-4">None</td>
+                  <td class="py-2 px-4">Reserved for future last-seen / online status tracking. No-op on server currently.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Push Fallback -->
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6 text-sm text-gray-300 space-y-4">
+          <p class="font-bold text-white text-base">5 — Push Notification Fallback (Offline Users)</p>
+          <p class="text-xs text-gray-400">When a user is offline (not connected to Socket.IO), the server uses registered push devices to deliver messages via <strong class="text-white">FCM</strong> or <strong class="text-white">WebPush</strong>. The device must be registered using <code class="text-indigo-300">POST /api/hr/devices/register</code>.</p>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <p class="text-xs text-white font-semibold mb-2">Delivery priority order:</p>
+            <ol class="list-decimal list-inside text-xs text-gray-300 space-y-1">
+              <li><strong class="text-indigo-300">Socket.IO emit</strong> — instant, if user is connected (<code>userSocketMap</code> checked)</li>
+              <li><strong class="text-indigo-300">FCM (Firebase Cloud Messaging)</strong> — Android &amp; iOS via <code>firebase-admin</code></li>
+              <li><strong class="text-indigo-300">WebPush (VAPID)</strong> — Web browsers via <code>web-push</code></li>
+            </ol>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <p class="text-xs text-white font-semibold mb-2">Environment Variables needed for push:</p>
+            <pre class="text-xs text-yellow-200"># Firebase (Android/iOS)
+GOOGLE_APPLICATION_CREDENTIALS_JSON={"type":"service_account",...}
+# or
+GOOGLE_APPLICATION_CREDENTIALS_PATH=/path/to/firebase-key.json
+
+# WebPush (Web browsers)
+VAPID_PUBLIC_KEY=BNxxx...
+VAPID_PRIVATE_KEY=xxx...
+VAPID_SUBJECT=mailto:admin@yourcrm.com
+
+# Optional TTLs
+PUSH_DEFAULT_TTL_SECONDS=60
+LOCATION_REQUEST_TTL_SECONDS=60
+LOCATION_REQUEST_EXPIRY_SECONDS=60</pre>
+          </div>
+
+          <div class="bg-gray-950 rounded-lg p-4">
+            <p class="text-xs text-white font-semibold mb-2">FCM message shape (data-only, silent):</p>
+            <pre class="text-xs text-yellow-200">{
+  token: "&lt;fcm-device-token&gt;",
+  data: {
+    type: "LOCATION_FETCH",     // all values stringified
+    requestId: "&lt;id&gt;",
+    silent: "true",
+    ts: "2026-03-18T10:00:00Z"
+  },
+  android: { priority: "high" },
+  apns: { payload: { aps: { "content-available": 1 } } }   // silent push iOS
+}</pre>
+          </div>
+        </div>
+
+        <!-- Location request full flow diagram -->
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6 text-sm text-gray-300 space-y-4">
+          <p class="font-bold text-white text-base">6 — Full Location Request Flow (with Sockets)</p>
+          <div class="bg-gray-950 rounded-lg p-4 text-xs">
+            <pre class="text-indigo-200 leading-relaxed">
+SUPERVISOR (online)                     SERVER                         EMPLOYEE (device)
+      │                                    │                                  │
+      │── POST /api/hr/location-requests ─▶│                                  │
+      │                                    │── DB: create LocationRequest ────│
+      │                                    │── DB: create LocationAccessAudit │
+      │                                    │                                  │
+      │                                    │── Socket: emitToUser(employee,   │
+      │                                    │       "location.fetch_request")  │
+      │                                    │── Push: sendLocationFetchSignal()│──▶ FCM / WebPush (if offline)
+      │◀── 201 { requestId, status }───────│                                  │
+      │                                    │                                  │
+      │                                    │          "location.fetch_request"│◀──
+      │                                    │                                  │── App gets GPS coords
+      │                                    │                                  │
+      │                                    │◀── POST /location-requests/:id/respond ──
+      │                                    │── DB: update → FULFILLED         │
+      │                                    │── Redis: store coords (TTL 60s)  │
+      │                                    │── Socket: emitToUser(supervisor, │
+      │                                    │       "location.responded")      │
+      │◀── "location.responded" ───────────│                                  │
+      │                                    │── Push: sendPushToUser(supervisor│──▶ FCM / WebPush (if supervisor offline)
+      │                                    │                                  │
+      │── GET /location-requests/:id/result│                                  │
+      │◀── { coords } (deleted from Redis) │                                  │
+</pre>
+          </div>
+        </div>
+
+        <!-- userSocketMap  -->
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-6 text-sm text-gray-300 space-y-3">
+          <p class="font-bold text-white text-base">7 — Multi-Device Support (<code>userSocketMap</code>)</p>
+          <p class="text-xs text-gray-400">One user can be logged in on multiple devices simultaneously. The server maintains a <code class="text-indigo-300">userSocketMap: Map&lt;userId, Set&lt;socketId&gt;&gt;</code>. When a message is emitted to <code>io.to(userId)</code>, Socket.IO delivers it to <strong>all connected sockets</strong> in that room (all devices).</p>
+          <pre class="bg-gray-950 rounded-lg p-4 text-xs text-yellow-200">// Server behavior
+userSocketMap.get(userId) → Set { "socket_A", "socket_B" }   // 2 devices online
+io.to(userId).emit("location.fetch_request", payload);        // both devices receive it
+
+// On disconnect, the socketId is removed
+// If set becomes empty → userId deleted from map → user is "offline"</pre>
+          <p class="text-xs text-gray-400">The <code>emitToUser()</code> function checks the map first. If the set is empty (user offline), it returns <code>false</code> — which triggers the push notification fallback.</p>
+        </div>
+
+        <!-- Quick reference -->
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-sm text-gray-300">
+          <p class="font-bold text-white text-base mb-4">8 — Quick Reference Cheatsheet</p>
+          <div class="overflow-x-auto">
+            <table class="text-xs w-full">
+              <thead>
+                <tr class="text-gray-500 border-b border-gray-700 text-left bg-gray-950">
+                  <th class="py-2 px-4">Item</th>
+                  <th class="py-2 px-4">Value / Detail</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-800">
+                <tr><td class="py-2 px-4 font-semibold text-gray-300">Socket URL</td><td class="py-2 px-4 font-mono text-indigo-300">wss://api.yourcrm.com (same server as HTTP)</td></tr>
+                <tr><td class="py-2 px-4 font-semibold text-gray-300">Auth method</td><td class="py-2 px-4"><code>{ auth: { token: "&lt;JWT&gt;" } }</code> in IO options</td></tr>
+                <tr><td class="py-2 px-4 font-semibold text-gray-300">First emit after connect</td><td class="py-2 px-4"><code>socket.emit("register", { userId }, callback)</code></td></tr>
+                <tr><td class="py-2 px-4 font-semibold text-gray-300">Room naming</td><td class="py-2 px-4">Each user joins a room named <code>userId</code></td></tr>
+                <tr><td class="py-2 px-4 font-semibold text-gray-300">Offline fallback</td><td class="py-2 px-4">FCM → WebPush via devices registered at <code>/api/hr/devices/register</code></td></tr>
+                <tr><td class="py-2 px-4 font-semibold text-gray-300">Key server file</td><td class="py-2 px-4 font-mono text-indigo-300">src/modules/socket/socket.service.ts</td></tr>
+                <tr><td class="py-2 px-4 font-semibold text-gray-300">Push sender file</td><td class="py-2 px-4 font-mono text-indigo-300">src/modules/socket/util-socket/push.sender.ts</td></tr>
+                <tr><td class="py-2 px-4 font-semibold text-gray-300">Auth middleware</td><td class="py-2 px-4 font-mono text-indigo-300">src/middlewares/auth-socket.middleware.ts</td></tr>
+                <tr><td class="py-2 px-4 font-semibold text-gray-300">CORS</td><td class="py-2 px-4"><code>origin: true, credentials: true</code> (all origins — restrict in production)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <footer class="text-xs text-gray-500 mt-10">
+        <p>File: <code class="text-indigo-200">apps/backend/hr.html</code></p>
+      </footer>
+    </div>
+  </body>
+</html>

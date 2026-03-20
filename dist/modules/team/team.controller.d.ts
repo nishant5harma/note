@@ -1,0 +1,38 @@
+import type { Response, NextFunction } from "express";
+import type { AuthRequest } from "../../types/auth-request.js";
+export declare const TeamController: {
+    createTeam: typeof createTeam;
+    listTeams: typeof listTeams;
+    getTeam: typeof getTeam;
+    updateTeam: typeof updateTeam;
+    deleteTeam: typeof deleteTeam;
+    assignLead: typeof assignLead;
+    listTeamUsers: typeof listTeamUsers;
+    assignMembersHandler: typeof assignMembersHandler;
+    bulkAssignHandler: typeof bulkAssignHandler;
+    removeMemberHandler: typeof removeMemberHandler;
+    bulkRemoveHandler: typeof bulkRemoveHandler;
+    transferRequestHandler: typeof transferRequestHandler;
+    joinRequestHandler: typeof joinRequestHandler;
+    listRequestsHandler: typeof listRequestsHandler;
+    respondRequestHandler: typeof respondRequestHandler;
+    listTeamMembersHandler: typeof listTeamMembersHandler;
+};
+export default TeamController;
+declare function createTeam(req: AuthRequest, res: Response, next: NextFunction): Promise<Response<any, Record<string, any>> | undefined>;
+declare function listTeams(_req: AuthRequest, res: Response, next: NextFunction): Promise<Response<any, Record<string, any>> | undefined>;
+declare function getTeam(req: AuthRequest, res: Response, next: NextFunction): Promise<Response<any, Record<string, any>> | undefined>;
+declare function updateTeam(req: AuthRequest, res: Response, next: NextFunction): Promise<Response<any, Record<string, any>> | undefined>;
+declare function deleteTeam(req: AuthRequest, res: Response, next: NextFunction): Promise<Response<any, Record<string, any>> | undefined>;
+declare function assignLead(req: AuthRequest, res: Response, next: NextFunction): Promise<Response<any, Record<string, any>> | undefined>;
+declare function listTeamUsers(req: AuthRequest, res: Response, next: NextFunction): Promise<Response<any, Record<string, any>> | undefined>;
+export declare function assignMembersHandler(req: AuthRequest, res: Response, next: NextFunction): Promise<Response<any, Record<string, any>> | undefined>;
+export declare function bulkAssignHandler(req: AuthRequest, res: Response, next: NextFunction): Promise<Response<any, Record<string, any>> | undefined>;
+export declare function removeMemberHandler(req: AuthRequest, res: Response, next: NextFunction): Promise<Response<any, Record<string, any>> | undefined>;
+export declare function bulkRemoveHandler(req: AuthRequest, res: Response, next: NextFunction): Promise<Response<any, Record<string, any>> | undefined>;
+export declare function transferRequestHandler(req: AuthRequest, res: Response, next: NextFunction): Promise<Response<any, Record<string, any>> | undefined>;
+export declare function joinRequestHandler(req: AuthRequest, res: Response, next: NextFunction): Promise<Response<any, Record<string, any>> | undefined>;
+export declare function listRequestsHandler(req: AuthRequest, res: Response, next: NextFunction): Promise<Response<any, Record<string, any>> | undefined>;
+export declare function respondRequestHandler(req: AuthRequest, res: Response, next: NextFunction): Promise<Response<any, Record<string, any>> | undefined>;
+export declare function listTeamMembersHandler(req: AuthRequest, res: Response, next: NextFunction): Promise<Response<any, Record<string, any>> | undefined>;
+//# sourceMappingURL=team.controller.d.ts.map
