@@ -7,6 +7,7 @@ import {
 import { LocationService } from "./location.service.js";
 import { BadRequestError } from "@/utils/http-errors.util.js";
 import { z } from "zod";
+import { toStringSafe } from "@/utils/fix.js";
 
 // src/modules/hr/location/location.controller.ts
 
@@ -65,7 +66,7 @@ async function respondLocationRequestHandler(
   next: NextFunction
 ) {
   try {
-    const { id } = req.params;
+    const id = toStringSafe(req.params.id);
     if (!id) throw new BadRequestError("request id required");
     const data = locationRequestRespondSchema.parse(req.body);
     if (!req.user) throw new BadRequestError("user missing in request");
@@ -87,7 +88,7 @@ async function getLocationRequestResultHandler(
   next: NextFunction
 ) {
   try {
-    const { id } = req.params;
+    const id = toStringSafe(req.params.id);
     if (!id) throw new BadRequestError("request id required");
     if (!req.user) throw new BadRequestError("user missing in request");
     const result = await LocationService.getLocationRequestResult(req.user, id);

@@ -7,6 +7,7 @@ import {
   BadRequestError,
   UnauthorizedError,
 } from "@/utils/http-errors.util.js";
+import { toStringSafe } from "@/utils/fix.js";
 
 // /src/modules/user/user.controller.ts
 
@@ -65,7 +66,7 @@ async function findUserByIdHandler(
   next: NextFunction
 ) {
   try {
-    const { id } = req.params;
+    const id = toStringSafe(req.params.id);
     if (!id) throw new BadRequestError("User ID is required");
     const currentUser = req.user; // middleware sets authenticated user object
     if (!currentUser)

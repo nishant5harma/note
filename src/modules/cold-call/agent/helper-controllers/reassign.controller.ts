@@ -15,7 +15,7 @@ export async function reassignHandler(
 ) {
   try {
     const actorId = (req as any).user?.id ?? "system";
-    const entryId = req.params.id;
+    const entryId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const toUserId = String(req.body?.toUserId ?? "").trim();
     const reason = req.body?.reason ?? null;
 

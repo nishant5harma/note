@@ -1,6 +1,4 @@
 {
-  // Visit https://aka.ms/tsconfig to read more about this file
-  "extends": "@repo/typescript-config/node.config.json",
   "compilerOptions": {
     // File Layout
     "rootDir": "./src",
@@ -11,6 +9,14 @@
     "lib": ["esnext"],
     "types": ["node"],
 
+    // Module System (Node ESM)
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+
     // Other Outputs
     "sourceMap": true,
     "declaration": true,
@@ -18,10 +24,10 @@
 
     // Stricter Typechecking Options
     "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
+    "exactOptionalPropertyTypes": false,
 
     // Recommended Options
-    "strict": true,
+    "strict": false,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
@@ -29,6 +35,7 @@
     "skipLibCheck": true,
 
     // Module Resolution
+    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }

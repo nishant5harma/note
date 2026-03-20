@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { BadRequestError, NotFoundError } from "@/utils/http-errors.util.js";
+import { toStringSafe } from "@/utils/fix.js";
 import { listAuditLogsQuerySchema } from "./audit-log.validator.js";
 import { getAuditLogById, listAuditLogs } from "./audit-log.service.js";
 
@@ -23,7 +24,7 @@ export async function getAuditLogByIdHandler(
   next: NextFunction
 ) {
   try {
-    const id = req.params.id;
+    const id = toStringSafe(req.params.id);
     if (!id) throw new BadRequestError("id is required");
     const row = await getAuditLogById(id);
     if (!row) throw new NotFoundError("AuditLog not found");

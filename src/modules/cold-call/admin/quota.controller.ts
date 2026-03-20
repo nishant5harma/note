@@ -6,6 +6,7 @@ import {
   getTeamQuotaProgress,
 } from "./quota.service.js";
 import { setQuotaSchema } from "../analytics/validator/validator.analytics.js";
+import { toStringSafe } from "@/utils/fix.js";
 
 export async function setQuotaHandler(
   req: Request,
@@ -38,7 +39,7 @@ export async function listQuotasHandler(
   next: NextFunction
 ) {
   try {
-    const teamId = req.params.teamId;
+    const teamId = toStringSafe(req.params.teamId);
     if (!teamId) throw new Error("teamId is required");
     const r = await getTeamQuotas(teamId);
     res.json({ ok: true, data: r });
@@ -53,7 +54,7 @@ export async function quotaProgressHandler(
   next: NextFunction
 ) {
   try {
-    const teamId = req.params.teamId;
+    const teamId = toStringSafe(req.params.teamId);
     if (!teamId) throw new Error("teamId is required");
     const r = await getTeamQuotaProgress(
       teamId,

@@ -6,6 +6,7 @@ import {
   getLeaderboard,
 } from "./analytics.service.js";
 import { parseISO } from "date-fns";
+import { toStringSafe } from "@/utils/fix.js";
 
 export async function agentPerformanceHandler(
   req: Request,
@@ -13,7 +14,7 @@ export async function agentPerformanceHandler(
   next: NextFunction
 ) {
   try {
-    const userId = req.params.userId;
+    const userId = toStringSafe(req.params.userId);
     if (!userId) throw new Error("userId is required");
     const from = req.query.from ? parseISO(String(req.query.from)) : undefined;
     const r = await getAgentPerformance(userId, from);
@@ -29,7 +30,7 @@ export async function teamPerformanceHandler(
   next: NextFunction
 ) {
   try {
-    const teamId = req.params.teamId;
+    const teamId = toStringSafe(req.params.teamId);
     if (!teamId) throw new Error("teamId is required");
     const from = req.query.from ? parseISO(String(req.query.from)) : undefined;
     const r = await getTeamPerformance(teamId, from);

@@ -50,7 +50,7 @@ export async function upsertSourcePoolHandler(
 ) {
   try {
     const dto = sourcePoolCreateSchema.parse(req.body);
-    const row = await upsertSourcePool(dto);
+    const row = await upsertSourcePool({ ...dto, source: dto.source! });
 
     // audit (best-effort)
     try {

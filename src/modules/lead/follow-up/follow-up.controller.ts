@@ -11,6 +11,7 @@ import {
   updateStatusSchema,
 } from "./validator/follow-up.validator.js";
 import { BadRequestError } from "@/utils/http-errors.util.js";
+import { toStringSafe } from "@/utils/fix.js";
 
 export async function createFollowUpHandler(
   req: Request,
@@ -18,7 +19,7 @@ export async function createFollowUpHandler(
   next: NextFunction
 ) {
   try {
-    const leadId = req.params.id;
+    const leadId = toStringSafe(req.params.id);
     if (!leadId) throw new BadRequestError();
     const actorId = (req as any).user?.id ?? "system";
 
@@ -49,7 +50,7 @@ export async function listFollowUpsHandler(
   next: NextFunction
 ) {
   try {
-    const leadId = req.params.id;
+    const leadId = toStringSafe(req.params.id);
     if (!leadId) throw new BadRequestError();
     const page = parseInt(String(req.query.page ?? "1"), 10);
     const limit = parseInt(String(req.query.limit ?? "50"), 10);
@@ -67,7 +68,7 @@ export async function updateLeadStatusHandler(
   next: NextFunction
 ) {
   try {
-    const leadId = req.params.id;
+    const leadId = toStringSafe(req.params.id);
     if (!leadId) throw new BadRequestError();
     const actorId = (req as any).user?.id ?? "system";
 
@@ -98,11 +99,8 @@ export async function listLeadStageHistoryHandler(
   next: NextFunction
 ) {
   try {
-    const leadId = req.params.id;
-
-    if (!leadId || typeof leadId !== "string") {
-      return res.status(400).json({ error: "Invalid leadId" });
-    }
+    const leadId = toStringSafe(req.params.id);
+    if (!leadId) return res.status(400).json({ error: "Invalid leadId" });
 
     const items = await listLeadStageHistory(leadId);
 

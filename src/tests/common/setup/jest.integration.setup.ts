@@ -15,7 +15,6 @@ process.env.NODE_ENV = process.env.NODE_ENV || "test";
 beforeAll(async () => {
   // Run migrations once (assumes prisma CLI and DATABASE_URL pointed to test DB)
   // If you prefer to run migrations manually, comment the line below.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { execSync } = await import("child_process");
   if (!global.__DB_SYNCED__) {
     try {

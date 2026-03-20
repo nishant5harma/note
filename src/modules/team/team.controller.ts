@@ -16,6 +16,7 @@ import {
   BadRequestError,
   UnauthorizedError,
 } from "@/utils/http-errors.util.js";
+import { toStringSafe } from "@/utils/fix.js";
 import type { AuthRequest } from "@/types/auth-request.js";
 
 // /src/modules/team/team.controller.ts
@@ -76,7 +77,7 @@ async function listTeams(_req: AuthRequest, res: Response, next: NextFunction) {
 
 async function getTeam(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { id } = req.params;
+    const id = toStringSafe(req.params.id);
     if (!id) {
       throw new BadRequestError("Team ID is required");
     }
@@ -89,7 +90,7 @@ async function getTeam(req: AuthRequest, res: Response, next: NextFunction) {
 
 async function updateTeam(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { id } = req.params;
+    const id = toStringSafe(req.params.id);
     if (!id) {
       throw new BadRequestError("Team ID is required");
     }
@@ -113,7 +114,7 @@ async function updateTeam(req: AuthRequest, res: Response, next: NextFunction) {
 
 async function deleteTeam(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { id } = req.params;
+    const id = toStringSafe(req.params.id);
     if (!id) {
       throw new BadRequestError("Team ID is required");
     }
@@ -132,7 +133,7 @@ async function deleteTeam(req: AuthRequest, res: Response, next: NextFunction) {
 
 async function assignLead(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const teamId = req.params.id;
+    const teamId = toStringSafe(req.params.id);
     if (!teamId) {
       throw new BadRequestError("Team ID is required");
     }
@@ -157,7 +158,7 @@ async function listTeamUsers(
   next: NextFunction
 ) {
   try {
-    const { id } = req.params;
+    const id = toStringSafe(req.params.id);
     if (!id) {
       throw new BadRequestError("Team ID is required");
     }
@@ -179,7 +180,7 @@ export async function assignMembersHandler(
   next: NextFunction
 ) {
   try {
-    const { teamId } = req.params;
+    const teamId = toStringSafe(req.params.teamId);
     if (!teamId) {
       throw new BadRequestError("Team ID is required");
     }
@@ -212,7 +213,7 @@ export async function bulkAssignHandler(
   next: NextFunction
 ) {
   try {
-    const { teamId } = req.params;
+    const teamId = toStringSafe(req.params.teamId);
     if (!teamId) {
       throw new BadRequestError("Team ID is required");
     }
@@ -241,7 +242,8 @@ export async function removeMemberHandler(
   next: NextFunction
 ) {
   try {
-    const { teamId, memberId } = req.params;
+    const teamId = toStringSafe(req.params.teamId);
+    const memberId = toStringSafe(req.params.memberId);
     if (!teamId || !memberId) {
       throw new BadRequestError("Team ID and Member ID are required");
     }
@@ -267,7 +269,7 @@ export async function bulkRemoveHandler(
   next: NextFunction
 ) {
   try {
-    const { teamId } = req.params;
+    const teamId = toStringSafe(req.params.teamId);
     if (!teamId) {
       throw new BadRequestError("Team ID is required");
     }
@@ -293,7 +295,8 @@ export async function transferRequestHandler(
   next: NextFunction
 ) {
   try {
-    const { teamId, memberId } = req.params;
+    const teamId = toStringSafe(req.params.teamId);
+    const memberId = toStringSafe(req.params.memberId);
     if (!teamId || !memberId) {
       throw new BadRequestError("Team ID and Member ID are required");
     }
@@ -317,7 +320,7 @@ export async function joinRequestHandler(
   next: NextFunction
 ) {
   try {
-    const { teamId } = req.params;
+    const teamId = toStringSafe(req.params.teamId);
     if (!req.user) {
       throw new UnauthorizedError();
     }
@@ -359,7 +362,7 @@ export async function respondRequestHandler(
   next: NextFunction
 ) {
   try {
-    const { requestId } = req.params;
+    const requestId = toStringSafe(req.params.requestId);
     if (!requestId) {
       throw new BadRequestError("Request ID is required");
     }
@@ -384,7 +387,7 @@ export async function listTeamMembersHandler(
   next: NextFunction
 ) {
   try {
-    const { teamId } = req.params;
+    const teamId = toStringSafe(req.params.teamId);
     if (!teamId) {
       throw new BadRequestError("Team ID is required");
     }

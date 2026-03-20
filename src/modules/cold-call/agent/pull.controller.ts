@@ -6,6 +6,7 @@ import {
   releaseLock,
 } from "./pull.service.js";
 import { prisma } from "@/db/db.js";
+import { toStringSafe } from "@/utils/fix.js";
 
 /**
  * POST /coldcall/pull
@@ -71,7 +72,7 @@ export async function refreshLockHandler(
 ) {
   try {
     const userId = (req as any).user?.id;
-    const entryId = req.params.id;
+    const entryId = toStringSafe(req.params.id);
     if (!userId) return res.status(401).json({ error: "unauthenticated" });
     if (!entryId) return res.status(400).json({ error: "entryId required" });
 
@@ -92,7 +93,7 @@ export async function releaseLockHandler(
 ) {
   try {
     const userId = (req as any).user?.id;
-    const entryId = req.params.id;
+    const entryId = toStringSafe(req.params.id);
     if (!userId) return res.status(401).json({ error: "unauthenticated" });
     if (!entryId) return res.status(400).json({ error: "entryId required" });
     const updated = await releaseLock(entryId, userId, true);

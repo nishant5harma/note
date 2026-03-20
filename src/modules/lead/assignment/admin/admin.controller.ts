@@ -3,6 +3,7 @@ import type { Request, Response, NextFunction } from "express";
 import { prisma } from "@/db/db.js";
 import { manualAssignLead } from "../assignment.service.js";
 import { LeadStatus } from "@prisma/client";
+import { toStringSafe } from "@/utils/fix.js";
 
 /**
  * GET /api/leads/escalated
@@ -46,7 +47,7 @@ export async function assignEscalatedHandler(
   next: NextFunction
 ) {
   try {
-    const leadId = req.params.id;
+    const leadId = toStringSafe(req.params.id);
     const { userId } = req.body;
     const actorId = (req as any).user?.id ?? "system";
 

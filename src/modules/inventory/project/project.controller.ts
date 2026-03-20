@@ -12,6 +12,7 @@ import {
   updateProjectSchema,
 } from "./validator/project.validator.js";
 import { BadRequestError } from "@/utils/http-errors.util.js";
+import { toStringSafe } from "@/utils/fix.js";
 
 export async function createProjectHandler(
   req: Request,
@@ -47,7 +48,7 @@ export async function updateProjectHandler(
 ) {
   try {
     const dto = updateProjectSchema.parse(req.body);
-    const id = req.params.id;
+    const id = toStringSafe(req.params.id);
     if (!id) throw new BadRequestError();
     const project = await updateProject(id, dto);
     res.json({ project });
@@ -62,7 +63,7 @@ export async function deleteProjectHandler(
   next: NextFunction
 ) {
   try {
-    const id = req.params.id;
+    const id = toStringSafe(req.params.id);
     if (!id) throw new BadRequestError();
     const project = await deleteProject(id);
     res.json({ project });

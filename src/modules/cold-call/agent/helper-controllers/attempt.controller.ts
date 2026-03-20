@@ -17,7 +17,9 @@ export async function logAttemptHandler(
 ) {
   try {
     const userId = (req as any).user?.id;
-    const entryId = req.params.id!;
+    const entryId = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
     if (!userId) return res.status(401).json({ error: "unauthenticated" });
     if (!entryId) return res.status(400).json({ error: "entryId required" });
 
@@ -32,7 +34,7 @@ export async function logAttemptHandler(
         where: { entryId },
       });
 
-      const nextAttemptNo = (max._max.attemptNo ?? 0) + 1;
+      const nextAttemptNo = (max._max?.attemptNo ?? 0) + 1;
 
       return await tx.coldCallAttempt.create({
         data: {
@@ -72,7 +74,9 @@ export async function completeEntryHandler(
 ) {
   try {
     const actorId = (req as any).user?.id ?? "system";
-    const entryId = req.params.id!;
+    const entryId = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
     const body = req.body ?? {};
 
     if (!entryId)
@@ -167,7 +171,7 @@ export async function completeEntryHandler(
         _max: { attemptNo: true },
         where: { entryId },
       });
-      const nextAttemptNo = (max._max.attemptNo ?? 0) + 1;
+      const nextAttemptNo = (max._max?.attemptNo ?? 0) + 1;
 
       await tx.coldCallAttempt.create({
         data: {

@@ -1,6 +1,7 @@
 import type { Response } from "express";
 import { RoleService } from "./roles.service.js";
 import type { AuthRequest } from "@/types/auth-request.js";
+import { toStringSafe } from "@/utils/fix.js";
 import {
   roleCreateSchema,
   roleUpdateSchema,
@@ -48,7 +49,7 @@ async function list(_req: AuthRequest, res: Response) {
 }
 
 async function get(req: AuthRequest, res: Response) {
-  const { id } = req.params;
+  const id = toStringSafe(req.params.id);
   if (!id) return res.status(400).json({ error: "Role ID is required" });
   const role = await RoleService.getRoleById(id);
   if (!role) return res.status(404).json({ error: "Not found" });
@@ -57,7 +58,7 @@ async function get(req: AuthRequest, res: Response) {
 
 async function update(req: AuthRequest, res: Response) {
   try {
-    const { id } = req.params;
+    const id = toStringSafe(req.params.id);
     const payload = roleUpdateSchema.parse(req.body);
     if (!id) return res.status(400).json({ error: "Role ID is required" });
     const role = await RoleService.updateRole(id, payload);
@@ -70,7 +71,7 @@ async function update(req: AuthRequest, res: Response) {
 
 async function remove(req: AuthRequest, res: Response) {
   try {
-    const { id } = req.params;
+    const id = toStringSafe(req.params.id);
     if (!id) return res.status(400).json({ error: "Role ID is required" });
     await RoleService.deleteRole(id);
     return res.status(204).send();
@@ -82,7 +83,7 @@ async function remove(req: AuthRequest, res: Response) {
 // Permissions
 async function assignPermission(req: AuthRequest, res: Response) {
   try {
-    const roleId = req.params.id;
+    const roleId = toStringSafe(req.params.id);
     const { permissionId } = assignPermissionSchema.parse(req.body);
     if (!roleId) return res.status(400).json({ error: "Role ID is required" });
     const rp = await RoleService.assignPermission(roleId, permissionId);
@@ -95,7 +96,8 @@ async function assignPermission(req: AuthRequest, res: Response) {
 
 async function removePermission(req: AuthRequest, res: Response) {
   try {
-    const { id: roleId, permId } = req.params;
+    const roleId = toStringSafe(req.params.id);
+    const permId = toStringSafe(req.params.permId);
     if (!roleId) return res.status(400).json({ error: "Role ID is required" });
     if (!permId)
       return res.status(400).json({ error: "Permission ID is required" });
@@ -107,7 +109,7 @@ async function removePermission(req: AuthRequest, res: Response) {
 }
 
 async function getPermissions(req: AuthRequest, res: Response) {
-  const { id } = req.params;
+  const id = toStringSafe(req.params.id);
   if (!id) return res.status(400).json({ error: "Role ID is required" });
   const perms = await RoleService.getRolePermissions(id);
   return res.json(perms);
@@ -133,7 +135,8 @@ async function assignRoleToUser(req: AuthRequest, res: Response) {
 
 async function removeRoleFromUser(req: AuthRequest, res: Response) {
   try {
-    const { userId, roleId } = req.params;
+    const userId = toStringSafe(req.params.userId);
+    const roleId = toStringSafe(req.params.roleId);
     if (!userId || !roleId) {
       return res
         .status(400)
