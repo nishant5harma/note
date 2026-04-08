@@ -57,7 +57,19 @@ export async function verifyHmacMiddleware(
       (req.headers["x-lead-source"] as string) ||
       (req.headers["x-source"] as string) ||
       undefined;
-    const provider = providerHeader ? String(providerHeader) : undefined;
+
+    // If provider isn't explicitly provided, try to infer it for Meta/Facebook
+    // so we can use WEBHOOK_SECRET_FACEBOOK instead of falling back to DEFAULT.
+    const inferredProvider =
+      !providerHeader &&
+      ((req.headers["x-hub-signature-256"] as string) ||
+        (req.headers["x-hub-signature"] as string))
+        ? "facebook"
+        : undefined;
+
+    const provider = providerHeader
+      ? String(providerHeader)
+      : inferredProvider ?? undefined;
 
     const secret = getSecretForProvider(provider);
 

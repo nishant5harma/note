@@ -78,8 +78,20 @@ export async function handleWebhook(rawBodyString: string, headersIn: any) {
 
   const providerHeader =
     headers["x-lead-source"] ?? headers["x-source"] ?? parsed.provider ?? null;
-  const provider = providerHeader
-    ? String(providerHeader).toLowerCase()
+
+  // If provider isn't explicit, infer Facebook/Meta webhooks:
+  // - Meta sends x-hub-signature-256 / x-hub-signature
+  // - Lead Ads payload commonly has entry[].changes[].value.leadgen_id
+  const inferredProvider =
+    !providerHeader &&
+    (headers["x-hub-signature-256"] ||
+      headers["x-hub-signature"] ||
+      parsed?.entry?.[0]?.changes?.[0]?.value?.leadgen_id)
+      ? "facebook"
+      : null;
+
+  const provider = (providerHeader ?? inferredProvider)
+    ? String(providerHeader ?? inferredProvider).toLowerCase()
     : undefined;
 
   const normalized = normalizeEvent(provider, parsed);
