@@ -1,0 +1,1 @@
+{"version":3,"file":"bigint-json-serialize.js","sourceRoot":"","sources":["../../src/utils/bigint-json-serialize.ts"],"names":[],"mappings":"AAAA;;;GAGG;AACH,MAAM,KAAK,GAAG,MAAM,CAAC,SAAiD,CAAC;AACvE,IAAI,KAAK,CAAC,MAAM,KAAK,SAAS,EAAE,CAAC;IAC/B,KAAK,CAAC,MAAM,GAAG,SAAS,MAAM;QAC5B,OAAO,IAAI,CAAC,QAAQ,EAAE,CAAC;IACzB,CAAC,CAAC;AACJ,CAAC"}

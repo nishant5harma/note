@@ -9,9 +9,11 @@ import { jwtErrorHandler } from "../../error-handlers/jwt.error-handler.js";
 import { globalErrorHandler } from "../../error-handlers/global.error-handler.js";
 import AppRouter from "./app.route.js";
 import { initBullBoard } from "../../utils/bullmq-ui.js";
+import { bigintJsonReplacer } from "../../utils/json-replacer.util.js";
 // /src/app.ts
 dotenv.config({ quiet: true });
 const app = express();
+app.set("json replacer", bigintJsonReplacer);
 // app.use(helmet());
 app.use(cors({ origin: true, credentials: true }));
 app.use(cookieParser());

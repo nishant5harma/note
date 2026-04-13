@@ -1,4 +1,5 @@
 // src/index.ts
+import "./utils/bigint-json-serialize.js";
 import http from "http";
 import app from "./modules/app/app.js";
 import { initSocketServer } from "./modules/socket/socket.service.js";

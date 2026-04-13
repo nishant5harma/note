@@ -45,6 +45,23 @@ describe("Inventory Unit Routes (integration)", () => {
     expect(res.body.data.unitNumber).toBe("R-101");
   });
 
+  it("creates unit with price (BigInt serializes in JSON)", async () => {
+    const { token } = await createAuthContext(["inventory.write"]);
+
+    const res = await request(app)
+      .post("/api/inventory/units")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        projectId,
+        unitNumber: "P-202",
+        price: 1_250_000,
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.unitNumber).toBe("P-202");
+    expect(res.body.data.price).toBe("1250000");
+  });
+
   it("lists units (inventory.read)", async () => {
     const { token } = await createAuthContext(["inventory.read"]);
 
