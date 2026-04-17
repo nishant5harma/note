@@ -1415,6 +1415,25 @@
 
     </div>
 
+    es. Inventory image upload is implemented for units and listings only (not for projects/towers as separate image APIs).
+
+All of these sit under /api/inventory (from app.route.ts: AppRouter.use("/inventory", requireAuth, InventoryRouter)), so they need authentication and the permissions shown.
+
+Unit images (UnitRouter → /units)
+Method	Endpoint	Permission
+POST	/api/inventory/units/:id/images	inventory.write — multipart field images (uploadMulti("images"))
+GET	/api/inventory/units/:id/images	inventory.read — list images
+DELETE	/api/inventory/units/images/:imageId	inventory.delete
+POST	/api/inventory/units/:id/images/reorder	inventory.write — reorder
+Listing images (ListingRouter → /listings)
+Method	Endpoint	Permission
+POST	/api/inventory/listings/:id/images	inventory.write — multipart field images
+GET	/api/inventory/listings/:id/images	inventory.read
+DELETE	/api/inventory/listings/images/:imageId	inventory.delete
+POST	/api/inventory/listings/:id/images/reorder	inventory.write
+Upload handling is in upload.middleware.ts (Supabase / public URL flow used elsewhere in the app). There is no dedicated image router mounted under inventory for projects; the image.route.ts file is effectively comments only — the real routes are the ones above on unit and listing routers.
+
+now add this in 
     <!-- Footer -->
     <div class="border-t border-gray-800 px-6 md:px-12 py-6 mt-12 text-sm text-gray-500 flex items-center justify-between">
       <span>CRM Backend · Inventory Management API Reference</span>

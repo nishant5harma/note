@@ -8,7 +8,7 @@
     "dev": "tsx watch src/index.ts",
     "dev:worker": "tsx watch src/modules/lead/assignment/worker/worker.ts",
     "start": "tsc && tsc-alias && node ./dist/index.js",
-    "start:worker": "tsc && tsc-alias && node -r dotenv/config ./dist/src/modules/lead/assignment/worker/worker.js",
+    "start:worker": "tsc && tsc-alias && node -r dotenv/config ./dist/modules/lead/assignment/worker/worker.js",
     "build": "tsc && tsc-alias",
     "lint": "eslint .",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
