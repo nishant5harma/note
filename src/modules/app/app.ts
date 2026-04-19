@@ -20,7 +20,12 @@ app.set("json replacer", bigintJsonReplacer);
 // app.use(helmet());
 app.use(cors({ origin: true, credentials: true }));
 app.use(cookieParser());
-app.use(express.json());
+const jsonParser = express.json();
+app.use((req, res, next) => {
+  // Keep webhook payload unparsed so route-level express.raw() can verify HMAC on exact bytes.
+  if (req.originalUrl.startsWith("/api/leads/webhook")) return next();
+  return jsonParser(req, res, next);
+});
 app.use(morgan("dev"));
 
 // API routes mount point
